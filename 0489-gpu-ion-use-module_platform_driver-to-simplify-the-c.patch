@@ -1,0 +1,40 @@
+From 0a7dde3d881d173c9300bf1d46017cb593d3e52b Mon Sep 17 00:00:00 2001
+From: Wei Yongjun <yongjun_wei@trendmicro.com.cn>
+Date: Tue, 17 Dec 2013 11:16:41 +0800
+Subject: [PATCH 489/722] gpu: ion: use module_platform_driver to simplify the
+ code
+
+module_platform_driver() makes the code simpler by eliminating
+boilerplate code.
+
+Signed-off-by: Wei Yongjun <yongjun_wei@trendmicro.com.cn>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/ion/tegra/tegra_ion.c |   13 +------------
+ 1 file changed, 1 insertion(+), 12 deletions(-)
+
+diff --git a/drivers/staging/android/ion/tegra/tegra_ion.c b/drivers/staging/android/ion/tegra/tegra_ion.c
+index 0849600..4b3d93f 100644
+--- a/drivers/staging/android/ion/tegra/tegra_ion.c
++++ b/drivers/staging/android/ion/tegra/tegra_ion.c
+@@ -81,16 +81,5 @@ static struct platform_driver ion_driver = {
+ 	.driver = { .name = "ion-tegra" }
+ };
+ 
+-static int __init ion_init(void)
+-{
+-	return platform_driver_register(&ion_driver);
+-}
+-
+-static void __exit ion_exit(void)
+-{
+-	platform_driver_unregister(&ion_driver);
+-}
+-
+-module_init(ion_init);
+-module_exit(ion_exit);
++module_platform_driver(ion_driver);
+ 
+-- 
+1.7.9.5
+

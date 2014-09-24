@@ -1,0 +1,40 @@
+From 99738c2dc1ad034c0b71318b245b063479ed423a Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Wed, 29 Jan 2014 13:45:20 -0800
+Subject: [PATCH 696/722] arm64: ptrace: add is_wide_instruction() macro
+
+Add the is_wide_instruction() macro. This was copied from the arm
+architecture.
+
+Change-Id: I28f83b47f5c587fe778dc2846df77673f8dd918b
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/361737
+Reviewed-by: Peng Du <pdu@nvidia.com>
+Reviewed-on: http://git-master/r/365060
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Tested-by: Oskari Jaaskelainen <oskarij@nvidia.com>
+---
+ arch/arm64/include/asm/ptrace.h |    8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/include/asm/ptrace.h b/arch/arm64/include/asm/ptrace.h
+index 41e59e2..fff2895 100644
+--- a/arch/arm64/include/asm/ptrace.h
++++ b/arch/arm64/include/asm/ptrace.h
+@@ -171,5 +171,13 @@ extern unsigned long profile_pc(struct pt_regs *regs);
+ #define profile_pc(regs) instruction_pointer(regs)
+ #endif
+ 
++/*
++ * True if instr is a 32-bit thumb instruction. This works if instr
++ * is the first or only half-word of a thumb instruction. It also works
++ * when instr holds all 32-bits of a wide thumb instruction if stored
++ * in the form (first_half<<16)|(second_half)
++ */
++#define is_wide_instruction(instr)	((unsigned)(instr) >= 0xe800)
++
+ #endif /* __ASSEMBLY__ */
+ #endif
+-- 
+1.7.9.5
+

@@ -1,0 +1,29 @@
+From f6f56efe7de93cd091ee456921a6043da370c22a Mon Sep 17 00:00:00 2001
+From: Dmitry Shmidt <dimitrysh@google.com>
+Date: Tue, 24 Jun 2014 13:19:46 -0700
+Subject: [PATCH 607/722] net: wireless: Add NL80211_FLAG_NEED_WIPHY flag to
+ vendor command
+
+Change-Id: I52ee3bc8a422c2a4c57cccccccd6ba3e721b4c01
+Signed-off-by: Dmitry Shmidt <dimitrysh@google.com>
+---
+ net/wireless/nl80211.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index ddb993f..150a38f 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -9153,7 +9153,8 @@ static struct genl_ops nl80211_ops[] = {
+ 		.doit = nl80211_vendor_cmd,
+ 		.policy = nl80211_policy,
+ 		.flags = GENL_ADMIN_PERM,
+-		.internal_flags = NL80211_FLAG_NEED_RTNL,
++		.internal_flags = NL80211_FLAG_NEED_WIPHY |
++				  NL80211_FLAG_NEED_RTNL,
+ 	},
+ };
+ 
+-- 
+1.7.9.5
+

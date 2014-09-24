@@ -1,0 +1,31 @@
+From 42df511db0372b4878b322d812b975e4632a2928 Mon Sep 17 00:00:00 2001
+From: Todd Poynor <toddpoynor@google.com>
+Date: Fri, 5 Sep 2014 18:27:38 -0700
+Subject: [PATCH 686/722] cpufreq: interactive: make common_tunables static
+
+From: Cylen Yao <cylen.yao@mediatek.com>
+
+common_tunables should be static.
+
+Change-Id: I502ee3062bece5082fea7861eff2f6237e25cede
+Signed-off-by: Todd Poynor <toddpoynor@google.com>
+---
+ drivers/cpufreq/cpufreq_interactive.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/cpufreq/cpufreq_interactive.c b/drivers/cpufreq/cpufreq_interactive.c
+index 437aaed..72563be 100644
+--- a/drivers/cpufreq/cpufreq_interactive.c
++++ b/drivers/cpufreq/cpufreq_interactive.c
+@@ -117,7 +117,7 @@ struct cpufreq_interactive_tunables {
+ };
+ 
+ /* For cases where we have single governor instance for system */
+-struct cpufreq_interactive_tunables *common_tunables;
++static struct cpufreq_interactive_tunables *common_tunables;
+ 
+ static struct attribute_group *get_sysfs_attr(void);
+ 
+-- 
+1.7.9.5
+

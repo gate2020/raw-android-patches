@@ -1,0 +1,38 @@
+From a1eabac6e216f8ecee7668ad4468990e465392ba Mon Sep 17 00:00:00 2001
+From: Alexandre Courbot <acourbot@nvidia.com>
+Date: Fri, 4 Oct 2013 10:59:57 -0700
+Subject: [PATCH 486/722] gpiolib: safer implementation of desc_to_gpio()
+
+The current implementation of desc_to_gpio() relies on the chip pointer
+to be set to a valid value in order to compute the GPIO number. This
+was done in the hope that we can get rid of the gpio_desc global array,
+but this is not happening anytime soon.
+
+This patch reimplements desc_to_gpio() in a fashion similar to that of
+gpio_to_desc(). As a result, desc_to_gpio(gpio_to_desc(gpio)) == gpio is
+now always true. This allows to call desc_to_gpio() on non-initialized
+descriptors as some error-handling code currently does.
+
+Signed-off-by: Alexandre Courbot <acourbot@nvidia.com>
+Reported-by: Dr. H. Nikolaus Schaller <hns@goldelico.com>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+---
+ drivers/gpio/gpiolib.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpiolib.c b/drivers/gpio/gpiolib.c
+index c2534d6..4aff349 100644
+--- a/drivers/gpio/gpiolib.c
++++ b/drivers/gpio/gpiolib.c
+@@ -136,7 +136,7 @@ static struct gpio_desc *gpio_to_desc(unsigned gpio)
+  */
+ static int desc_to_gpio(const struct gpio_desc *desc)
+ {
+-	return desc->chip->base + gpio_chip_hwgpio(desc);
++	return desc - &gpio_desc[0];
+ }
+ 
+ 
+-- 
+1.7.9.5
+

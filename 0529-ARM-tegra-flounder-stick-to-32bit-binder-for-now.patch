@@ -1,0 +1,25 @@
+From 8179b7b7fe7e0ee85f670d109de6d7e3be46b2a9 Mon Sep 17 00:00:00 2001
+From: JP Abgrall <jpa@google.com>
+Date: Wed, 5 Feb 2014 12:29:34 -0800
+Subject: [PATCH 529/722] ARM: tegra: flounder: stick to 32bit binder for now.
+
+Signed-off-by: JP Abgrall <jpa@google.com>
+---
+ drivers/staging/android/Kconfig |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/android/Kconfig b/drivers/staging/android/Kconfig
+index a14e0b4..a802bc0 100644
+--- a/drivers/staging/android/Kconfig
++++ b/drivers/staging/android/Kconfig
+@@ -21,6 +21,7 @@ config ANDROID_BINDER_IPC
+ 
+ config ANDROID_BINDER_IPC_32BIT
+ 	bool "Use old 32-bit binder api"
++        default y
+ 	depends on !64BIT
+ 	---help---
+ 	  Enable to support an old 32-bit Android user-space. Breaks the new
+-- 
+1.7.9.5
+

@@ -1,0 +1,37 @@
+From 1ba2ccbc8cdcb0881dd91212b2f04318884dfe4a Mon Sep 17 00:00:00 2001
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 18 Jul 2014 11:28:33 -0700
+Subject: [PATCH 644/722] MAINTAINERS: create seccomp entry
+
+Add myself as seccomp maintainer.
+
+Suggested-by: James Morris <jmorris@namei.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ MAINTAINERS |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index ad7e322..6144836 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -7131,6 +7131,16 @@ S:	Maintained
+ F:	drivers/mmc/host/sdhci.*
+ F:	drivers/mmc/host/sdhci-pltfm.[ch]
+ 
++SECURE COMPUTING
++M:	Kees Cook <keescook@chromium.org>
++T:	git git://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git seccomp
++S:	Supported
++F:	kernel/seccomp.c
++F:	include/uapi/linux/seccomp.h
++F:	include/linux/seccomp.h
++K:	\bsecure_computing
++K:	\bTIF_SECCOMP\b
++
+ SECURE DIGITAL HOST CONTROLLER INTERFACE, OPEN FIRMWARE BINDINGS (SDHCI-OF)
+ M:	Anton Vorontsov <avorontsov@ru.mvista.com>
+ L:	linuxppc-dev@lists.ozlabs.org
+-- 
+1.7.9.5
+

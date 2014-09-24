@@ -1,0 +1,269 @@
+From f3ae9a8286d63f13715d2082965d6b8849af05a5 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Thu, 12 Dec 2013 17:50:35 -0800
+Subject: [PATCH 495/722] ion: move shrinker out of heaps
+
+Every heap that uses deferred frees is going to need a shrinker
+to shrink the freelist under memory pressure.  Rather than
+requiring each heap to implement a shrinker, automatically
+register a shrinker if the deferred free flag is set.
+The system heap also needs to shrink its page pools, so add
+a shrink function to the heap ops that will be called after
+shrinking the freelists.
+
+Change-Id: Icda722d683426fadb8ddd1c8e9499264ab682c57
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion.c             |    3 ++
+ drivers/staging/android/ion/ion_heap.c        |   38 +++++++++++++++
+ drivers/staging/android/ion/ion_page_pool.c   |    7 +--
+ drivers/staging/android/ion/ion_priv.h        |   21 ++++----
+ drivers/staging/android/ion/ion_system_heap.c |   64 +++++++------------------
+ 5 files changed, 71 insertions(+), 62 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 7522b0b..1a85724 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -1451,6 +1451,9 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
+ 	if (heap->flags & ION_HEAP_FLAG_DEFER_FREE)
+ 		ion_heap_init_deferred_free(heap);
+ 
++	if ((heap->flags & ION_HEAP_FLAG_DEFER_FREE) || heap->ops->shrink)
++		ion_heap_init_shrinker(heap);
++
+ 	heap->dev = dev;
+ 	down_write(&dev->lock);
+ 	/* use negative heap->id to reverse the priority -- when traversing
+diff --git a/drivers/staging/android/ion/ion_heap.c b/drivers/staging/android/ion/ion_heap.c
+index 96feebb..5c14bc2 100644
+--- a/drivers/staging/android/ion/ion_heap.c
++++ b/drivers/staging/android/ion/ion_heap.c
+@@ -252,6 +252,44 @@ int ion_heap_init_deferred_free(struct ion_heap *heap)
+ 	return 0;
+ }
+ 
++static int ion_heap_shrink(struct shrinker *shrinker, struct shrink_control *sc)
++{
++	struct ion_heap *heap = container_of(shrinker, struct ion_heap,
++					     shrinker);
++	int total = 0;
++	int freed = 0;
++	int to_scan = sc->nr_to_scan;
++
++	if (to_scan == 0)
++		goto out;
++
++	/*
++	 * shrink the free list first, no point in zeroing the memory if we're
++	 * just going to reclaim it
++	 */
++	if (heap->flags & ION_HEAP_FLAG_DEFER_FREE)
++		freed = ion_heap_freelist_drain(heap, to_scan * PAGE_SIZE) /
++				PAGE_SIZE;
++
++	to_scan -= freed;
++	if (to_scan < 0)
++		to_scan = 0;
++
++out:
++	total = ion_heap_freelist_size(heap) / PAGE_SIZE;
++	if (heap->ops->shrink)
++		total += heap->ops->shrink(heap, sc->gfp_mask, to_scan);
++	return total;
++}
++
++void ion_heap_init_shrinker(struct ion_heap *heap)
++{
++	heap->shrinker.shrink = ion_heap_shrink;
++	heap->shrinker.seeks = DEFAULT_SEEKS;
++	heap->shrinker.batch = 0;
++	register_shrinker(&heap->shrinker);
++}
++
+ struct ion_heap *ion_heap_create(struct ion_platform_heap *heap_data)
+ {
+ 	struct ion_heap *heap = NULL;
+diff --git a/drivers/staging/android/ion/ion_page_pool.c b/drivers/staging/android/ion/ion_page_pool.c
+index f087a02..0e20e62 100644
+--- a/drivers/staging/android/ion/ion_page_pool.c
++++ b/drivers/staging/android/ion/ion_page_pool.c
+@@ -130,15 +130,11 @@ static int ion_page_pool_total(struct ion_page_pool *pool, bool high)
+ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
+ 				int nr_to_scan)
+ {
+-	int nr_freed = 0;
+ 	int i;
+ 	bool high;
+ 
+ 	high = !!(gfp_mask & __GFP_HIGHMEM);
+ 
+-	if (nr_to_scan == 0)
+-		return ion_page_pool_total(pool, high);
+-
+ 	for (i = 0; i < nr_to_scan; i++) {
+ 		struct page *page;
+ 
+@@ -153,10 +149,9 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
+ 		}
+ 		mutex_unlock(&pool->mutex);
+ 		ion_page_pool_free_pages(pool, page);
+-		nr_freed += (1 << pool->order);
+ 	}
+ 
+-	return nr_freed;
++	return ion_page_pool_total(pool, high);
+ }
+ 
+ struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order)
+diff --git a/drivers/staging/android/ion/ion_priv.h b/drivers/staging/android/ion/ion_priv.h
+index 58e84cc..85866e6 100644
+--- a/drivers/staging/android/ion/ion_priv.h
++++ b/drivers/staging/android/ion/ion_priv.h
+@@ -114,6 +114,7 @@ struct ion_heap_ops {
+ 	void (*unmap_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
+ 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
+ 			 struct vm_area_struct *vma);
++	int (*shrink)(struct ion_heap *heap, gfp_t gfp_mask, int nr_to_scan);
+ };
+ 
+ /**
+@@ -132,10 +133,7 @@ struct ion_heap_ops {
+  *			allocating.  These are specified by platform data and
+  *			MUST be unique
+  * @name:		used for debugging
+- * @shrinker:		a shrinker for the heap, if the heap caches system
+- *			memory, it must define a shrinker to return it on low
+- *			memory conditions, this includes system memory cached
+- *			in the deferred free lists for heaps that support it
++ * @shrinker:		a shrinker for the heap
+  * @free_list:		free list head if deferred free is used
+  * @free_list_size	size of the deferred free list in bytes
+  * @lock:		protects the free list
+@@ -219,6 +217,16 @@ int ion_heap_buffer_zero(struct ion_buffer *buffer);
+ int ion_heap_pages_zero(struct page *page, size_t size, pgprot_t pgprot);
+ 
+ /**
++ * ion_heap_init_shrinker
++ * @heap:		the heap
++ *
++ * If a heap sets the ION_HEAP_FLAG_DEFER_FREE flag or defines the shrink op
++ * this function will be called to setup a shrinker to shrink the freelists
++ * and call the heap's shrink op.
++ */
++void ion_heap_init_shrinker(struct ion_heap *heap);
++
++/**
+  * ion_heap_init_deferred_free -- initialize deferred free functionality
+  * @heap:		the heap
+  *
+@@ -305,13 +313,8 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
+  * @low_count:		number of lowmem items in the pool
+  * @high_items:		list of highmem items
+  * @low_items:		list of lowmem items
+- * @shrinker:		a shrinker for the items
+  * @mutex:		lock protecting this struct and especially the count
+  *			item list
+- * @alloc:		function to be used to allocate pageory when the pool
+- *			is empty
+- * @free:		function to be used to free pageory back to the system
+- *			when the shrinker fires
+  * @gfp_mask:		gfp_mask to use from alloc
+  * @order:		order of pages in the pool
+  * @list:		plist node for list of pools
+diff --git a/drivers/staging/android/ion/ion_system_heap.c b/drivers/staging/android/ion/ion_system_heap.c
+index 5bccf9e..4a87fcf 100644
+--- a/drivers/staging/android/ion/ion_system_heap.c
++++ b/drivers/staging/android/ion/ion_system_heap.c
+@@ -227,60 +227,34 @@ static void ion_system_heap_unmap_dma(struct ion_heap *heap,
+ 	return;
+ }
+ 
+-static struct ion_heap_ops system_heap_ops = {
+-	.allocate = ion_system_heap_allocate,
+-	.free = ion_system_heap_free,
+-	.map_dma = ion_system_heap_map_dma,
+-	.unmap_dma = ion_system_heap_unmap_dma,
+-	.map_kernel = ion_heap_map_kernel,
+-	.unmap_kernel = ion_heap_unmap_kernel,
+-	.map_user = ion_heap_map_user,
+-};
+-
+-static int ion_system_heap_shrink(struct shrinker *shrinker,
+-				  struct shrink_control *sc) {
+-
+-	struct ion_heap *heap = container_of(shrinker, struct ion_heap,
+-					     shrinker);
+-	struct ion_system_heap *sys_heap = container_of(heap,
+-							struct ion_system_heap,
+-							heap);
++static int ion_system_heap_shrink(struct ion_heap *heap, gfp_t gfp_mask,
++					int nr_to_scan)
++{
++	struct ion_system_heap *sys_heap;
+ 	int nr_total = 0;
+-	int nr_freed = 0;
+ 	int i;
+ 
+-	if (sc->nr_to_scan == 0)
+-		goto end;
+-
+-	/* shrink the free list first, no point in zeroing the memory if
+-	   we're just going to reclaim it */
+-	nr_freed += ion_heap_freelist_drain(heap, sc->nr_to_scan * PAGE_SIZE) /
+-		PAGE_SIZE;
+-
+-	if (nr_freed >= sc->nr_to_scan)
+-		goto end;
++	sys_heap = container_of(heap, struct ion_system_heap, heap);
+ 
+ 	for (i = 0; i < num_orders; i++) {
+ 		struct ion_page_pool *pool = sys_heap->pools[i];
+-
+-		nr_freed += ion_page_pool_shrink(pool, sc->gfp_mask,
+-						 sc->nr_to_scan);
+-		if (nr_freed >= sc->nr_to_scan)
+-			break;
++		nr_total += ion_page_pool_shrink(pool, gfp_mask, nr_to_scan);
+ 	}
+ 
+-end:
+-	/* total number of items is whatever the page pools are holding
+-	   plus whatever's in the freelist */
+-	for (i = 0; i < num_orders; i++) {
+-		struct ion_page_pool *pool = sys_heap->pools[i];
+-		nr_total += ion_page_pool_shrink(pool, sc->gfp_mask, 0);
+-	}
+-	nr_total += ion_heap_freelist_size(heap) / PAGE_SIZE;
+ 	return nr_total;
+-
+ }
+ 
++static struct ion_heap_ops system_heap_ops = {
++	.allocate = ion_system_heap_allocate,
++	.free = ion_system_heap_free,
++	.map_dma = ion_system_heap_map_dma,
++	.unmap_dma = ion_system_heap_unmap_dma,
++	.map_kernel = ion_heap_map_kernel,
++	.unmap_kernel = ion_heap_unmap_kernel,
++	.map_user = ion_heap_map_user,
++	.shrink = ion_system_heap_shrink,
++};
++
+ static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
+ 				      void *unused)
+ {
+@@ -328,10 +302,6 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
+ 		heap->pools[i] = pool;
+ 	}
+ 
+-	heap->heap.shrinker.shrink = ion_system_heap_shrink;
+-	heap->heap.shrinker.seeks = DEFAULT_SEEKS;
+-	heap->heap.shrinker.batch = 0;
+-	register_shrinker(&heap->heap.shrinker);
+ 	heap->heap.debug_show = ion_system_heap_debug_show;
+ 	return &heap->heap;
+ err_create_pool:
+-- 
+1.7.9.5
+

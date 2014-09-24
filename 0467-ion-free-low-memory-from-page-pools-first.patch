@@ -1,0 +1,35 @@
+From b928ad649cd32b4ca5ba7429bfe897433d37dfea Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Thu, 21 Nov 2013 18:56:37 -0800
+Subject: [PATCH 467/722] ion: free low memory from page pools first
+
+When the shrinkers are called with GFP_HIGH free low memory first,
+it is more important to have free than high memory.
+
+Change-Id: I7ad8a9c133830f04d429c3d87b781b3e862ccedb
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_page_pool.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion_page_pool.c b/drivers/staging/android/ion/ion_page_pool.c
+index b052ff6..5a0e629 100644
+--- a/drivers/staging/android/ion/ion_page_pool.c
++++ b/drivers/staging/android/ion/ion_page_pool.c
+@@ -143,10 +143,10 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
+ 		struct page *page;
+ 
+ 		mutex_lock(&pool->mutex);
+-		if (high && pool->high_count) {
+-			page = ion_page_pool_remove(pool, true);
+-		} else if (pool->low_count) {
++		if (pool->low_count) {
+ 			page = ion_page_pool_remove(pool, false);
++		} else if (high && pool->high_count) {
++			page = ion_page_pool_remove(pool, true);
+ 		} else {
+ 			mutex_unlock(&pool->mutex);
+ 			break;
+-- 
+1.7.9.5
+

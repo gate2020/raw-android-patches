@@ -1,0 +1,29 @@
+From 39fdc30ff59d36904e8f25361b07d6c88e04b078 Mon Sep 17 00:00:00 2001
+From: Greg Hackmann <ghackmann@google.com>
+Date: Mon, 15 Sep 2014 15:34:55 -0700
+Subject: [PATCH 710/722] android: base-cfg: enable ARMV7_COMPAT
+
+Enables backwards-compatibility features on arm64, and has no effect
+(does not exist) on other architectures
+
+Change-Id: I6fc2f6567437750a0032f8a39a9cde1fb92d4ef4
+Signed-off-by: Greg Hackmann <ghackmann@google.com>
+---
+ android/configs/android-base.cfg |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/android/configs/android-base.cfg b/android/configs/android-base.cfg
+index bdc4749..d8503e4 100644
+--- a/android/configs/android-base.cfg
++++ b/android/configs/android-base.cfg
+@@ -6,6 +6,7 @@ CONFIG_ANDROID=y
+ CONFIG_ANDROID_BINDER_IPC=y
+ CONFIG_ANDROID_INTF_ALARM_DEV=y
+ CONFIG_ANDROID_LOW_MEMORY_KILLER=y
++CONFIG_ARMV7_COMPAT=y
+ CONFIG_ASHMEM=y
+ CONFIG_BLK_DEV_DM=y
+ CONFIG_BLK_DEV_INITRD=y
+-- 
+1.7.9.5
+

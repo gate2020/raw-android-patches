@@ -1,0 +1,73 @@
+From 80cb26c175627cb9633aeae13adc8455450bf77a Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Tue, 28 Jan 2014 12:40:10 -0800
+Subject: [PATCH 704/722] arm64: optionally set CP15BEN in SCTLR
+
+Setting CP15BEN allows legacy applications running in AArch32 mode
+that use CP15 DMB as similar instructions to continue running.
+
+Change-Id: If76d3c6ee12865ff8c4b4e7aed01146bead87773
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/366096
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Tested-by: Oskari Jaaskelainen <oskarij@nvidia.com>
+---
+ arch/arm64/Kconfig   |   11 +++++++++++
+ arch/arm64/mm/proc.S |   15 +++++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 787cee3..0df94f1 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -218,6 +218,17 @@ config ARMV7_COMPAT
+ 	 If you want to execute ARMv7 applications, say Y
+ 
+ 
++config ARMV7_COMPAT_CP15_BARRIER
++	bool "Allow applications to use the CP15 barrier operations"
++	depends on ARMV7_COMPAT
++	default y
++	help
++	 This option allows applications to use deprecated CP15 barrier
++	 instructions. This is useful because this was the only way to create
++	 a barrier on older ARM processors.
++
++	 If you want to execute ARMv7 applications, say Y
++
+ source "mm/Kconfig"
+ 
+ endmenu
+diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+index 9428de8..48fffb2 100644
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -160,6 +160,20 @@ ENTRY(__cpu_setup)
+ 	ret					// return to head.S
+ ENDPROC(__cpu_setup)
+ 
++#ifdef CONFIG_ARMV7_COMPAT_CP15_BARRIER
++	/*
++	 *                 n n            T
++	 *       U E      WT T UD     US IHBS
++	 *       CE0      XWHW CZ     ME TEEA S
++	 * .... .IEE .... NEAI TE.I ..AD DEN0 ACAM
++	 * 0011 0... 1101 ..0. ..0. 10.. .... .... < hardware reserved
++	 * .... .100 .... 01.1 11.1 ..01 0011 1101 < software settings
++	 */
++	.type	crval, #object
++crval:
++	.word	0x030802e2			// clear
++	.word	0x0405d13d			// set
++#else
+ 	/*
+ 	 *                 n n            T
+ 	 *       U E      WT T UD     US IHBS
+@@ -172,3 +186,4 @@ ENDPROC(__cpu_setup)
+ crval:
+ 	.word	0x030802e2			// clear
+ 	.word	0x0405d11d			// set
++#endif
+-- 
+1.7.9.5
+

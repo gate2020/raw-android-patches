@@ -1,0 +1,69 @@
+From a34c461af47c7ae9232ac42f62ab450a7a4120e5 Mon Sep 17 00:00:00 2001
+From: Mark Hambleton <mahamble@broadcom.com>
+Date: Tue, 3 Dec 2013 19:19:12 +0000
+Subject: [PATCH 546/722] arm64: cmpxchg: update macros to prevent warnings
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Make sure the value we are going to return is referenced in order to
+avoid warnings from newer GCCs such as:
+
+arch/arm64/include/asm/cmpxchg.h:162:3: warning: value computed is not used [-Wunused-value]
+  ((__typeof__(*(ptr)))__cmpxchg_mb((ptr),   \
+   ^
+net/netfilter/nf_conntrack_core.c:674:2: note: in expansion of macro ‘cmpxchg’
+  cmpxchg(&nf_conntrack_hash_rnd, 0, rand);
+
+[Modified to use the current underlying implementation as current
+mainline for both cmpxchg() and cmpxchg_local() does -- broonie]
+
+Signed-off-by: Mark Hambleton <mahamble@broadcom.com>
+Signed-off-by: Mark Brown <broonie@linaro.org>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+---
+ arch/arm64/include/asm/cmpxchg.h |   28 +++++++++++++++++-----------
+ 1 file changed, 17 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm64/include/asm/cmpxchg.h b/arch/arm64/include/asm/cmpxchg.h
+index 8a8ce0e..a8b44ca 100644
+--- a/arch/arm64/include/asm/cmpxchg.h
++++ b/arch/arm64/include/asm/cmpxchg.h
+@@ -158,17 +158,23 @@ static inline unsigned long __cmpxchg_mb(volatile void *ptr, unsigned long old,
+ 	return ret;
+ }
+ 
+-#define cmpxchg(ptr,o,n)						\
+-	((__typeof__(*(ptr)))__cmpxchg_mb((ptr),			\
+-					  (unsigned long)(o),		\
+-					  (unsigned long)(n),		\
+-					  sizeof(*(ptr))))
+-
+-#define cmpxchg_local(ptr,o,n)						\
+-	((__typeof__(*(ptr)))__cmpxchg((ptr),				\
+-				       (unsigned long)(o),		\
+-				       (unsigned long)(n),		\
+-				       sizeof(*(ptr))))
++#define cmpxchg(ptr, o, n) \
++({ \
++	__typeof__(*(ptr)) __ret; \
++	__ret = (__typeof__(*(ptr))) \
++		__cmpxchg_mb((ptr), (unsigned long)(o), (unsigned long)(n), \
++			     sizeof(*(ptr))); \
++	__ret; \
++})
++
++#define cmpxchg_local(ptr, o, n) \
++({ \
++	__typeof__(*(ptr)) __ret; \
++	__ret = (__typeof__(*(ptr))) \
++		__cmpxchg((ptr), (unsigned long)(o), \
++			  (unsigned long)(n), sizeof(*(ptr))); \
++	__ret; \
++})
+ 
+ #define cmpxchg64(ptr,o,n)		cmpxchg((ptr),(o),(n))
+ #define cmpxchg64_local(ptr,o,n)	cmpxchg_local((ptr),(o),(n))
+-- 
+1.7.9.5
+

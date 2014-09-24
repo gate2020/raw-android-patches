@@ -1,0 +1,164 @@
+From 2c6d7de579c2cfebbc9378e5209c641a93839f0a Mon Sep 17 00:00:00 2001
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 10 Jun 2014 15:45:09 -0700
+Subject: [PATCH 650/722] MIPS: add seccomp syscall
+
+Wires up the new seccomp syscall.
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Oleg Nesterov <oleg@redhat.com>
+
+Conflicts:
+	arch/mips/include/uapi/asm/unistd.h
+	arch/mips/kernel/scall32-o32.S
+	arch/mips/kernel/scall64-64.S
+	arch/mips/kernel/scall64-n32.S
+	arch/mips/kernel/scall64-o32.S
+
+Change-Id: I7031bdbec7c90292aeb7e255c73cb36e6ec43af2
+---
+ arch/mips/include/uapi/asm/unistd.h |   30 ++++++++++++++++++++++++------
+ arch/mips/kernel/scall32-o32.S      |    6 ++++++
+ arch/mips/kernel/scall64-64.S       |    4 ++++
+ arch/mips/kernel/scall64-n32.S      |    4 ++++
+ arch/mips/kernel/scall64-o32.S      |    6 +++++-
+ 5 files changed, 43 insertions(+), 7 deletions(-)
+
+diff --git a/arch/mips/include/uapi/asm/unistd.h b/arch/mips/include/uapi/asm/unistd.h
+index 1dee279..af4d5c0 100644
+--- a/arch/mips/include/uapi/asm/unistd.h
++++ b/arch/mips/include/uapi/asm/unistd.h
+@@ -369,16 +369,22 @@
+ #define __NR_process_vm_writev		(__NR_Linux + 346)
+ #define __NR_kcmp			(__NR_Linux + 347)
+ #define __NR_finit_module		(__NR_Linux + 348)
++/* Backporting seccomp, skip a few ...
++ * #define __NR_sched_setattr		(__NR_Linux + 349)
++ * #define __NR_sched_getattr		(__NR_Linux + 350)
++ * #define __NR_renameat2			(__NR_Linux + 351)
++ */
++#define __NR_seccomp			(__NR_Linux + 352)
+ 
+ /*
+  * Offset of the last Linux o32 flavoured syscall
+  */
+-#define __NR_Linux_syscalls		348
++#define __NR_Linux_syscalls		352
+ 
+ #endif /* _MIPS_SIM == _MIPS_SIM_ABI32 */
+ 
+ #define __NR_O32_Linux			4000
+-#define __NR_O32_Linux_syscalls		348
++#define __NR_O32_Linux_syscalls		352
+ 
+ #if _MIPS_SIM == _MIPS_SIM_ABI64
+ 
+@@ -695,16 +701,22 @@
+ #define __NR_kcmp			(__NR_Linux + 306)
+ #define __NR_finit_module		(__NR_Linux + 307)
+ #define __NR_getdents64			(__NR_Linux + 308)
++/* Backporting seccomp, skip a few ...
++ * #define __NR_sched_setattr		(__NR_Linux + 309)
++ * #define __NR_sched_getattr		(__NR_Linux + 310)
++ * #define __NR_renameat2			(__NR_Linux + 311)
++ */
++#define __NR_seccomp			(__NR_Linux + 312)
+ 
+ /*
+  * Offset of the last Linux 64-bit flavoured syscall
+  */
+-#define __NR_Linux_syscalls		308
++#define __NR_Linux_syscalls		312
+ 
+ #endif /* _MIPS_SIM == _MIPS_SIM_ABI64 */
+ 
+ #define __NR_64_Linux			5000
+-#define __NR_64_Linux_syscalls		308
++#define __NR_64_Linux_syscalls		312
+ 
+ #if _MIPS_SIM == _MIPS_SIM_NABI32
+ 
+@@ -1025,15 +1037,21 @@
+ #define __NR_process_vm_writev		(__NR_Linux + 310)
+ #define __NR_kcmp			(__NR_Linux + 311)
+ #define __NR_finit_module		(__NR_Linux + 312)
++/* Backporting seccomp, skip a few ...
++ * #define __NR_sched_setattr		(__NR_Linux + 313)
++ * #define __NR_sched_getattr		(__NR_Linux + 314)
++ * #define __NR_renameat2			(__NR_Linux + 315)
++ */
++#define __NR_seccomp			(__NR_Linux + 316)
+ 
+ /*
+  * Offset of the last N32 flavoured syscall
+  */
+-#define __NR_Linux_syscalls		312
++#define __NR_Linux_syscalls		316
+ 
+ #endif /* _MIPS_SIM == _MIPS_SIM_NABI32 */
+ 
+ #define __NR_N32_Linux			6000
+-#define __NR_N32_Linux_syscalls		312
++#define __NR_N32_Linux_syscalls		316
+ 
+ #endif /* _UAPI_ASM_UNISTD_H */
+diff --git a/arch/mips/kernel/scall32-o32.S b/arch/mips/kernel/scall32-o32.S
+index 9b36424..bcb2184 100644
+--- a/arch/mips/kernel/scall32-o32.S
++++ b/arch/mips/kernel/scall32-o32.S
+@@ -593,6 +593,12 @@ einval: li	v0, -ENOSYS
+ 	sys	sys_process_vm_writev	6
+ 	sys	sys_kcmp		5
+ 	sys	sys_finit_module	3
++	/* Backporting seccomp, skip a few ... */
++	sys sys_ni_syscall		0	/* sys_sched_setattr */
++	sys sys_ni_syscall		0	/* sys_sched_getattr */		/* 4350 */
++	sys sys_ni_syscall		0	/* sys_renameat2 */
++	sys	sys_seccomp 3
++
+ 	.endm
+ 
+ 	/* We pre-compute the number of _instruction_ bytes needed to
+diff --git a/arch/mips/kernel/scall64-64.S b/arch/mips/kernel/scall64-64.S
+index 97a5909..285872f 100644
+--- a/arch/mips/kernel/scall64-64.S
++++ b/arch/mips/kernel/scall64-64.S
+@@ -424,4 +424,8 @@ sys_call_table:
+ 	PTR	sys_kcmp
+ 	PTR	sys_finit_module
+ 	PTR	sys_getdents64
++	sys sys_ni_syscall	/* sys_sched_setattr */
++	sys sys_ni_syscall	/* sys_sched_getattr */		/* 5310 */
++	sys sys_ni_syscall	/* sys_renameat2 */
++	sys	sys_seccomp
+ 	.size	sys_call_table,.-sys_call_table
+diff --git a/arch/mips/kernel/scall64-n32.S b/arch/mips/kernel/scall64-n32.S
+index edcb659..bdee1a1 100644
+--- a/arch/mips/kernel/scall64-n32.S
++++ b/arch/mips/kernel/scall64-n32.S
+@@ -417,4 +417,8 @@ EXPORT(sysn32_call_table)
+ 	PTR	compat_sys_process_vm_writev	/* 6310 */
+ 	PTR	sys_kcmp
+ 	PTR	sys_finit_module
++	sys sys_ni_syscall	/* sys_sched_setattr */
++	sys sys_ni_syscall	/* sys_sched_getattr */
++	sys sys_ni_syscall	/* sys_renameat2 */			/* 6315 */
++	sys	sys_seccomp
+ 	.size	sysn32_call_table,.-sysn32_call_table
+diff --git a/arch/mips/kernel/scall64-o32.S b/arch/mips/kernel/scall64-o32.S
+index 74f485d..a1f826a2 100644
+--- a/arch/mips/kernel/scall64-o32.S
++++ b/arch/mips/kernel/scall64-o32.S
+@@ -541,4 +541,8 @@ sys_call_table:
+ 	PTR	compat_sys_process_vm_writev
+ 	PTR	sys_kcmp
+ 	PTR	sys_finit_module
+-	.size	sys_call_table,.-sys_call_table
++	sys sys_ni_syscall	/* sys_sched_setattr */
++	sys sys_ni_syscall	/* sys_sched_getattr */		/* 4350 */
++	sys sys_ni_syscall	/* sys_renameat2 */
++	sys	sys_seccomp
++	.size	sys32_call_table,.-sys32_call_table
+-- 
+1.7.9.5
+

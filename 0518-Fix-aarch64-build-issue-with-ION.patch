@@ -1,0 +1,43 @@
+From 5675c04044d70363f6ada070aea41a5434ed6741 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Fri, 31 Jan 2014 11:22:18 -0800
+Subject: [PATCH 518/722] Fix aarch64 build issue with ION
+
+In trying to build ION for aarch64, I came across the following build error:
+
+In file included from /home/jstultz/projects/linux/linaro.android/arch/arm64/include/asm/page.h:39:0,
+                 from drivers/staging/android/ion/ion_system_heap.c:17:
+/home/jstultz/projects/linux/linaro.android/arch/arm64/include/asm/pgtable-3level-types.h:19:1: error: unknown type name u64
+ typedef u64 pteval_t;
+ ^
+/home/jstultz/projects/linux/linaro.android/arch/arm64/include/asm/pgtable-3level-types.h:20:1: error: unknown type name u64
+ typedef u64 pmdval_t;
+ ^
+...
+
+The problem is asm/page.h doesn't include anything that defines u64, so
+add an asm/types.h include to the pgtable-3level-types.h to match upstream
+and avoid the issue.
+
+Change-Id: I3f098bf666761ac6b316389a46d37cc449c342d6
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ arch/arm64/include/asm/pgtable-3level-types.h |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/include/asm/pgtable-3level-types.h b/arch/arm64/include/asm/pgtable-3level-types.h
+index 4489615..4e94424 100644
+--- a/arch/arm64/include/asm/pgtable-3level-types.h
++++ b/arch/arm64/include/asm/pgtable-3level-types.h
+@@ -16,6 +16,8 @@
+ #ifndef __ASM_PGTABLE_3LEVEL_TYPES_H
+ #define __ASM_PGTABLE_3LEVEL_TYPES_H
+ 
++#include <asm/types.h>
++
+ typedef u64 pteval_t;
+ typedef u64 pmdval_t;
+ typedef u64 pgdval_t;
+-- 
+1.7.9.5
+

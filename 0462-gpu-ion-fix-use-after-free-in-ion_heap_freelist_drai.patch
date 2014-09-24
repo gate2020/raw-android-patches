@@ -1,0 +1,32 @@
+From 9273153e861f3db897798ec0dc15f70d1aae9410 Mon Sep 17 00:00:00 2001
+From: Mitchel Humpherys <mitchelh@codeaurora.org>
+Date: Tue, 6 Aug 2013 11:19:42 -0700
+Subject: [PATCH 462/722] gpu: ion: fix use-after-free in
+ ion_heap_freelist_drain
+
+The `buffer' variable is being used after being freed. Fix this.
+
+Change-Id: Iea3471fa7dc7535bbf0620c1639fea2008d7cf19
+Signed-off-by: Mitchel Humpherys <mitchelh@codeaurora.org>
+---
+ drivers/staging/android/ion/ion_heap.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion_heap.c b/drivers/staging/android/ion/ion_heap.c
+index 5a93a02..e061b26 100644
+--- a/drivers/staging/android/ion/ion_heap.c
++++ b/drivers/staging/android/ion/ion_heap.c
+@@ -200,9 +200,9 @@ size_t ion_heap_freelist_drain(struct ion_heap *heap, size_t size)
+ 		if (total_drained >= size)
+ 			break;
+ 		list_del(&buffer->list);
+-		ion_buffer_destroy(buffer);
+ 		heap->free_list_size -= buffer->size;
+ 		total_drained += buffer->size;
++		ion_buffer_destroy(buffer);
+ 	}
+ 	rt_mutex_unlock(&heap->lock);
+ 
+-- 
+1.7.9.5
+

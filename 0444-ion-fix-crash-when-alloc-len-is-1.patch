@@ -1,0 +1,40 @@
+From 49bdc418a3c1129d49fe92d89cf77111584fb51f Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Wed, 13 Nov 2013 14:44:53 -0800
+Subject: [PATCH 444/722] ion: fix crash when alloc len is -1
+
+If userspace passes a length between -4095 and -1 to allocate it
+will pass the len != 0 check, but when len is page aligned it will
+be 0.  Check len after page aligning.
+
+Drop the warning as well, userspace shouldn't be able to trigger
+a warning in the kernel.
+
+Change-Id: I96c7142637638991f3a9af9be7cfbb50f79f3803
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 0e379a3..a8d4735 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -485,11 +485,11 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
+ 	 * request of the caller allocate from it.  Repeat until allocate has
+ 	 * succeeded or all heaps have been tried
+ 	 */
+-	if (WARN_ON(!len))
+-		return ERR_PTR(-EINVAL);
+-
+ 	len = PAGE_ALIGN(len);
+ 
++	if (!len)
++		return ERR_PTR(-EINVAL);
++
+ 	down_read(&dev->lock);
+ 	plist_for_each_entry(heap, &dev->heaps, node) {
+ 		/* if the caller didn't specify this heap id */
+-- 
+1.7.9.5
+

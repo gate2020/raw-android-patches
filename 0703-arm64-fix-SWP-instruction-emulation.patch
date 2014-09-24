@@ -1,0 +1,69 @@
+From ff5878c3916bdfc1229eeade86728814c4dd4e4f Mon Sep 17 00:00:00 2001
+From: Rich Wiley <rwiley@nvidia.com>
+Date: Mon, 10 Mar 2014 14:01:06 -0700
+Subject: [PATCH 703/722] arm64: fix SWP instruction emulation
+
+initial variable values may get overwritten
+if they're listed as an output in ASM, even if
+they're not explicitly written to.
+
+Change-Id: I2a239e1819850a2a7005a46e83d82deac4ca303b
+Signed-off-by: Rich Wiley <rwiley@nvidia.com>
+Reviewed-on: http://git-master/r/379646
+Reviewed-by: Automatic_Commit_Validation_User
+Reviewed-by: Li Li (SW-TEGRA) <lli5@nvidia.com>
+Tested-by: Li Li (SW-TEGRA) <lli5@nvidia.com>
+GVS: Gerrit_Virtual_Submit
+Reviewed-by: Alexander Van Brunt <avanbrunt@nvidia.com>
+---
+ arch/arm64/kernel/swp_emulate.c |    8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/kernel/swp_emulate.c b/arch/arm64/kernel/swp_emulate.c
+index b1a176b..508fd2e 100644
+--- a/arch/arm64/kernel/swp_emulate.c
++++ b/arch/arm64/kernel/swp_emulate.c
+@@ -40,12 +40,13 @@ static int swpb(u8 in, u8 *out, u8 *addr)
+ {
+ 	u8 _out;
+ 	int res;
+-	int err = 0;
++	int err;
+ 
+ 	do {
+ 		__asm__ __volatile__(
+ 		"0:	ldxrb	%w1, %4\n"
+ 		"1:	stxrb	%w0, %w3, %4\n"
++		"	mov	%w2, #0\n"
+ 		"2:\n"
+ 		"	.section	 .fixup,\"ax\"\n"
+ 		"	.align		2\n"
+@@ -58,7 +59,7 @@ static int swpb(u8 in, u8 *out, u8 *addr)
+ 		"	.quad		1b, 3b\n"
+ 		"	.previous"
+ 		: "=&r" (res), "=r" (_out), "=r" (err)
+-		: "r" (in), "Q" (addr), "i" (-EFAULT)
++		: "r" (in), "Q" (*addr), "i" (-EFAULT)
+ 		: "cc", "memory");
+ 	} while (err == 0 && res != 0);
+ 
+@@ -77,6 +78,7 @@ static int swp(u32 in, u32 *out, u32 *addr)
+ 		__asm__ __volatile__(
+ 		"0:	ldxr	%w1, %4\n"
+ 		"1:	stxr	%w0, %w3, %4\n"
++		"	mov	%w2, #0\n"
+ 		"2:\n"
+ 		"	.section	 .fixup,\"ax\"\n"
+ 		"	.align		2\n"
+@@ -89,7 +91,7 @@ static int swp(u32 in, u32 *out, u32 *addr)
+ 		"	.quad		1b, 3b\n"
+ 		"	.previous"
+ 		: "=&r" (res), "=r" (_out), "=r" (err)
+-		: "r" (in), "Q" (addr), "i" (-EFAULT)
++		: "r" (in), "Q" (*addr), "i" (-EFAULT)
+ 		: "cc", "memory");
+ 	} while (err == 0 && res != 0);
+ 
+-- 
+1.7.9.5
+

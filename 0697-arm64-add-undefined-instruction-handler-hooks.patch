@@ -1,0 +1,115 @@
+From bc97ba4de74958ead0d40d44d1b4516e7f3de8dd Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Wed, 29 Jan 2014 13:41:01 -0800
+Subject: [PATCH 697/722] arm64: add undefined instruction handler hooks
+
+Add undefined instruction handler hooks similar to the system in the
+arm archetecture. One difference is that hooks can only be added at
+boot time and they can never be removed. This removes the need for
+the spinlock in the handler.
+
+Change-Id: I4684937f5209ca2a64ee63947bb2ab6411ae14f7
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/361736
+Reviewed-on: http://git-master/r/365059
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Tested-by: Oskari Jaaskelainen <oskarij@nvidia.com>
+---
+ arch/arm64/include/asm/traps.h |   13 +++++++++++++
+ arch/arm64/kernel/traps.c      |   40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 53 insertions(+)
+
+diff --git a/arch/arm64/include/asm/traps.h b/arch/arm64/include/asm/traps.h
+index 10ca8ff..75f51ea 100644
+--- a/arch/arm64/include/asm/traps.h
++++ b/arch/arm64/include/asm/traps.h
+@@ -18,6 +18,19 @@
+ #ifndef __ASM_TRAP_H
+ #define __ASM_TRAP_H
+ 
++#include <linux/list.h>
++
++struct undef_hook {
++	struct list_head node;
++	u32 instr_mask;
++	u32 instr_val;
++	u32 pstate_mask;
++	u32 pstate_val;
++	int (*fn)(struct pt_regs *regs, unsigned int instr);
++};
++
++void register_undef_hook(struct undef_hook *hook);
++
+ static inline int in_exception_text(unsigned long ptr)
+ {
+ 	extern char __exception_text_start[];
+diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+index 7ffaddd..4f8bf32 100644
+--- a/arch/arm64/kernel/traps.c
++++ b/arch/arm64/kernel/traps.c
+@@ -3,6 +3,7 @@
+  *
+  * Copyright (C) 1995-2009 Russell King
+  * Copyright (C) 2012 ARM Ltd.
++ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 as
+@@ -257,15 +258,54 @@ void arm64_notify_die(const char *str, struct pt_regs *regs,
+ 		die(str, regs, err);
+ }
+ 
++static LIST_HEAD(undef_hook);
++
++void register_undef_hook(struct undef_hook *hook)
++{
++	list_add(&hook->node, &undef_hook);
++}
++
++static int call_undef_hook(struct pt_regs *regs, unsigned int instr)
++{
++	struct undef_hook *hook;
++	int (*fn)(struct pt_regs *regs, unsigned int instr) = NULL;
++
++	list_for_each_entry(hook, &undef_hook, node)
++		if ((instr & hook->instr_mask) == hook->instr_val &&
++		    (regs->pstate & hook->pstate_mask) == hook->pstate_val)
++			fn = hook->fn;
++
++	return fn ? fn(regs, instr) : 1;
++}
++
+ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
+ {
++	u32 instr;
+ 	siginfo_t info;
+ 	void __user *pc = (void __user *)instruction_pointer(regs);
+ 
+ 	/* check for AArch32 breakpoint instructions */
+ 	if (!aarch32_break_handler(regs))
+ 		return;
++	if (compat_thumb_mode(regs)) {
++		if (get_user(instr, (u16 __user *)pc))
++			goto die_sig;
++		if (is_wide_instruction(instr)) {
++			u32 instr2;
++			if (get_user(instr2, (u16 __user *)pc+1))
++				goto die_sig;
++			instr <<= 16;
++			instr |= instr2;
++		}
++
++	} else if ((get_user(instr, (u32 __user *)pc))) {
++		goto die_sig;
++	}
++
++	if (call_undef_hook(regs, instr) == 0)
++		return;
+ 
++die_sig:
+ 	if (show_unhandled_signals && unhandled_signal(current, SIGILL) &&
+ 	    printk_ratelimit()) {
+ 		pr_info("%s[%d]: undefined instruction: pc=%p\n",
+-- 
+1.7.9.5
+

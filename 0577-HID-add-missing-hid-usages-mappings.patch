@@ -1,0 +1,207 @@
+From 77232898045d67b125d33399c91ae141d3e3c6c1 Mon Sep 17 00:00:00 2001
+From: Mathieu Meisser <mmeisser@logitech.com>
+Date: Fri, 11 Apr 2014 17:42:19 +0200
+Subject: [PATCH 577/722] HID: add missing hid usages mappings
+
+Integrate several new definitions (not code) that
+add additional hid mappings from the HID HUT 1.12
+and approved additional requests.
+
+Additions are taken from the commits in the
+linux-input upstream: f362e69, 2a4d815, 3b5a7ab,
+358f247, 701ba53, d09bbfd, af8036d, 5820e4d, a443255
+
+Change-Id: Id0e1cff5828062009b4f94c987ac91f88f14652e
+Signed-off-by: Mathieu Meisser <mmeisser@logitech.com>
+Signed-off-by: Olivier Gay <ogay@logitech.com>
+---
+ drivers/hid/hid-debug.c    |   15 ++++++++++++++-
+ drivers/hid/hid-input.c    |   17 +++++++++++++++++
+ include/uapi/linux/input.h |   40 ++++++++++++++++++++++++++++++++++------
+ 3 files changed, 65 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/hid/hid-debug.c b/drivers/hid/hid-debug.c
+index 8453214..941ab3c 100644
+--- a/drivers/hid/hid-debug.c
++++ b/drivers/hid/hid-debug.c
+@@ -768,6 +768,8 @@ static const char *keys[KEY_MAX + 1] = {
+ 	[KEY_ALTERASE] = "AlternateErase",	[KEY_CANCEL] = "Cancel",
+ 	[KEY_BRIGHTNESSDOWN] = "BrightnessDown", [KEY_BRIGHTNESSUP] = "BrightnessUp",
+ 	[KEY_MEDIA] = "Media",			[KEY_UNKNOWN] = "Unknown",
++	[BTN_DPAD_UP] = "BtnDPadUp",		[BTN_DPAD_DOWN] = "BtnDPadDown",
++	[BTN_DPAD_LEFT] = "BtnDPadLeft",	[BTN_DPAD_RIGHT] = "BtnDPadRight",
+ 	[BTN_0] = "Btn0",			[BTN_1] = "Btn1",
+ 	[BTN_2] = "Btn2",			[BTN_3] = "Btn3",
+ 	[BTN_4] = "Btn4",			[BTN_5] = "Btn5",
+@@ -797,7 +799,8 @@ static const char *keys[KEY_MAX + 1] = {
+ 	[BTN_TOOL_MOUSE] = "ToolMouse",		[BTN_TOOL_LENS] = "ToolLens",
+ 	[BTN_TOUCH] = "Touch",			[BTN_STYLUS] = "Stylus",
+ 	[BTN_STYLUS2] = "Stylus2",		[BTN_TOOL_DOUBLETAP] = "ToolDoubleTap",
+-	[BTN_TOOL_TRIPLETAP] = "ToolTripleTap", [BTN_GEAR_DOWN] = "WheelBtn",
++	[BTN_TOOL_TRIPLETAP] = "ToolTripleTap",	[BTN_TOOL_QUADTAP] = "ToolQuadrupleTap",
++	[BTN_GEAR_DOWN] = "WheelBtn",
+ 	[BTN_GEAR_UP] = "Gear up",		[KEY_OK] = "Ok",
+ 	[KEY_SELECT] = "Select",		[KEY_GOTO] = "Goto",
+ 	[KEY_CLEAR] = "Clear",			[KEY_POWER2] = "Power2",
+@@ -852,6 +855,16 @@ static const char *keys[KEY_MAX + 1] = {
+ 	[KEY_KBDILLUMDOWN] = "KbdIlluminationDown",
+ 	[KEY_KBDILLUMUP] = "KbdIlluminationUp",
+ 	[KEY_SWITCHVIDEOMODE] = "SwitchVideoMode",
++	[KEY_BUTTONCONFIG] = "ButtonConfig",
++	[KEY_TASKMANAGER] = "TaskManager",
++	[KEY_JOURNAL] = "Journal",
++	[KEY_CONTROLPANEL] = "ControlPanel",
++	[KEY_APPSELECT] = "AppSelect",
++	[KEY_SCREENSAVER] = "ScreenSaver",
++	[KEY_VOICECOMMAND] = "VoiceCommand",
++	[KEY_BRIGHTNESS_MIN] = "BrightnessMin",
++	[KEY_BRIGHTNESS_MAX] = "BrightnessMax",
++	[KEY_BRIGHTNESS_AUTO] = "BrightnessAuto",
+ };
+ 
+ static const char *relatives[REL_MAX + 1] = {
+diff --git a/drivers/hid/hid-input.c b/drivers/hid/hid-input.c
+index 4602d29..2df9cdc 100644
+--- a/drivers/hid/hid-input.c
++++ b/drivers/hid/hid-input.c
+@@ -714,6 +714,13 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
+ 		case 0x06c: map_key_clear(KEY_YELLOW);		break;
+ 		case 0x06d: map_key_clear(KEY_ZOOM);		break;
+ 
++		case 0x06f: map_key_clear(KEY_BRIGHTNESSUP);		break;
++		case 0x070: map_key_clear(KEY_BRIGHTNESSDOWN);		break;
++		case 0x072: map_key_clear(KEY_BRIGHTNESS_TOGGLE);	break;
++		case 0x073: map_key_clear(KEY_BRIGHTNESS_MIN);		break;
++		case 0x074: map_key_clear(KEY_BRIGHTNESS_MAX);		break;
++		case 0x075: map_key_clear(KEY_BRIGHTNESS_AUTO);		break;
++
+ 		case 0x082: map_key_clear(KEY_VIDEO_NEXT);	break;
+ 		case 0x083: map_key_clear(KEY_LAST);		break;
+ 		case 0x084: map_key_clear(KEY_ENTER);		break;
+@@ -754,6 +761,7 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
+ 		case 0x0bf: map_key_clear(KEY_SLOW);		break;
+ 
+ 		case 0x0cd: map_key_clear(KEY_PLAYPAUSE);	break;
++		case 0x0cf: map_key_clear(KEY_VOICECOMMAND);	break;
+ 		case 0x0e0: map_abs_clear(ABS_VOLUME);		break;
+ 		case 0x0e2: map_key_clear(KEY_MUTE);		break;
+ 		case 0x0e5: map_key_clear(KEY_BASSBOOST);	break;
+@@ -761,6 +769,7 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
+ 		case 0x0ea: map_key_clear(KEY_VOLUMEDOWN);	break;
+ 		case 0x0f5: map_key_clear(KEY_SLOW);		break;
+ 
++		case 0x181: map_key_clear(KEY_BUTTONCONFIG);	break;
+ 		case 0x182: map_key_clear(KEY_BOOKMARKS);	break;
+ 		case 0x183: map_key_clear(KEY_CONFIG);		break;
+ 		case 0x184: map_key_clear(KEY_WORDPROCESSOR);	break;
+@@ -774,6 +783,8 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
+ 		case 0x18c: map_key_clear(KEY_VOICEMAIL);	break;
+ 		case 0x18d: map_key_clear(KEY_ADDRESSBOOK);	break;
+ 		case 0x18e: map_key_clear(KEY_CALENDAR);	break;
++		case 0x18f: map_key_clear(KEY_TASKMANAGER);	break;
++		case 0x190: map_key_clear(KEY_JOURNAL);		break;
+ 		case 0x191: map_key_clear(KEY_FINANCE);		break;
+ 		case 0x192: map_key_clear(KEY_CALC);		break;
+ 		case 0x193: map_key_clear(KEY_PLAYER);		break;
+@@ -782,10 +793,16 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
+ 		case 0x199: map_key_clear(KEY_CHAT);		break;
+ 		case 0x19c: map_key_clear(KEY_LOGOFF);		break;
+ 		case 0x19e: map_key_clear(KEY_COFFEE);		break;
++		case 0x19f: map_key_clear(KEY_CONTROLPANEL);		break;
++		case 0x1a2: map_key_clear(KEY_APPSELECT);		break;
++		case 0x1a3: map_key_clear(KEY_NEXT);		break;
++		case 0x1a4: map_key_clear(KEY_PREVIOUS);	break;
+ 		case 0x1a6: map_key_clear(KEY_HELP);		break;
+ 		case 0x1a7: map_key_clear(KEY_DOCUMENTS);	break;
+ 		case 0x1ab: map_key_clear(KEY_SPELLCHECK);	break;
+ 		case 0x1ae: map_key_clear(KEY_KEYBOARD);	break;
++		case 0x1b1: map_key_clear(KEY_SCREENSAVER);		break;
++		case 0x1b4: map_key_clear(KEY_FILE);		break;
+ 		case 0x1b6: map_key_clear(KEY_IMAGES);		break;
+ 		case 0x1b7: map_key_clear(KEY_AUDIO);		break;
+ 		case 0x1b8: map_key_clear(KEY_VIDEO);		break;
+diff --git a/include/uapi/linux/input.h b/include/uapi/linux/input.h
+index 93a9564..a86f530 100644
+--- a/include/uapi/linux/input.h
++++ b/include/uapi/linux/input.h
+@@ -461,10 +461,14 @@ struct input_keymap_entry {
+ #define KEY_VIDEO_NEXT		241	/* drive next video source */
+ #define KEY_VIDEO_PREV		242	/* drive previous video source */
+ #define KEY_BRIGHTNESS_CYCLE	243	/* brightness up, after max is min */
+-#define KEY_BRIGHTNESS_ZERO	244	/* brightness off, use ambient */
++#define KEY_BRIGHTNESS_AUTO	244	/* Set Auto Brightness: manual
++					  brightness control is off,
++					  rely on ambient */
++#define KEY_BRIGHTNESS_ZERO	KEY_BRIGHTNESS_AUTO
+ #define KEY_DISPLAY_OFF		245	/* display device to off state */
+ 
+-#define KEY_WIMAX		246
++#define KEY_WWAN		246	/* Wireless WAN (LTE, UMTS, GSM, etc.) */
++#define KEY_WIMAX		KEY_WWAN
+ #define KEY_RFKILL		247	/* Key that controls all radios */
+ 
+ #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+@@ -509,11 +513,15 @@ struct input_keymap_entry {
+ #define BTN_DEAD		0x12f
+ 
+ #define BTN_GAMEPAD		0x130
+-#define BTN_A			0x130
+-#define BTN_B			0x131
++#define BTN_SOUTH		0x130
++#define BTN_A			BTN_SOUTH
++#define BTN_EAST		0x131
++#define BTN_B			BTN_EAST
+ #define BTN_C			0x132
+-#define BTN_X			0x133
+-#define BTN_Y			0x134
++#define BTN_NORTH		0x133
++#define BTN_X			BTN_NORTH
++#define BTN_WEST		0x134
++#define BTN_Y			BTN_WEST
+ #define BTN_Z			0x135
+ #define BTN_TL			0x136
+ #define BTN_TR			0x137
+@@ -626,6 +634,7 @@ struct input_keymap_entry {
+ #define KEY_ADDRESSBOOK		0x1ad	/* AL Contacts/Address Book */
+ #define KEY_MESSENGER		0x1ae	/* AL Instant Messaging */
+ #define KEY_DISPLAYTOGGLE	0x1af	/* Turn display (LCD) on and off */
++#define KEY_BRIGHTNESS_TOGGLE	KEY_DISPLAYTOGGLE
+ #define KEY_SPELLCHECK		0x1b0   /* AL Spell Check */
+ #define KEY_LOGOFF		0x1b1   /* AL Logoff */
+ 
+@@ -710,6 +719,24 @@ struct input_keymap_entry {
+ #define KEY_ATTENDANT_TOGGLE	0x21d	/* Attendant call on or off */
+ #define KEY_LIGHTS_TOGGLE	0x21e	/* Reading light on or off */
+ 
++#define BTN_DPAD_UP		0x220
++#define BTN_DPAD_DOWN		0x221
++#define BTN_DPAD_LEFT		0x222
++#define BTN_DPAD_RIGHT		0x223
++
++#define KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */
++
++#define KEY_BUTTONCONFIG		0x240	/* AL Button Configuration */
++#define KEY_TASKMANAGER		0x241	/* AL Task/Project Manager */
++#define KEY_JOURNAL		0x242	/* AL Log/Journal/Timecard */
++#define KEY_CONTROLPANEL		0x243	/* AL Control Panel */
++#define KEY_APPSELECT		0x244	/* AL Select Task/Application */
++#define KEY_SCREENSAVER		0x245	/* AL Screen Saver */
++#define KEY_VOICECOMMAND		0x246	/* Listening Voice Command */
++
++#define KEY_BRIGHTNESS_MIN		0x250	/* Set Brightness to Minimum */
++#define KEY_BRIGHTNESS_MAX		0x251	/* Set Brightness to Maximum */
++
+ #define BTN_TRIGGER_HAPPY		0x2c0
+ #define BTN_TRIGGER_HAPPY1		0x2c0
+ #define BTN_TRIGGER_HAPPY2		0x2c1
+@@ -847,6 +874,7 @@ struct input_keymap_entry {
+ #define SW_FRONT_PROXIMITY	0x0b  /* set = front proximity sensor active */
+ #define SW_ROTATE_LOCK		0x0c  /* set = rotate locked/disabled */
+ #define SW_LINEIN_INSERT	0x0d  /* set = inserted */
++#define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
+ #define SW_MAX			0x0f
+ #define SW_CNT			(SW_MAX+1)
+ 
+-- 
+1.7.9.5
+

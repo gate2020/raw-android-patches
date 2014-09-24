@@ -1,0 +1,31 @@
+From 779a6cf48cf313582b8d88757a798866a29195d0 Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Thu, 20 Feb 2014 10:46:21 -0800
+Subject: [PATCH 708/722] arm64: report vfpv3 instead of vfpv3d16
+
+vfpv3 is the correct version for an ARMv8 processor and it is the
+version reported by an A15.
+
+Change-Id: I486f3af21a352c27775888cca332a48d7e0c59ce
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/370076
+---
+ arch/arm64/kernel/setup.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
+index efe4850..18fcb7c 100644
+--- a/arch/arm64/kernel/setup.c
++++ b/arch/arm64/kernel/setup.c
+@@ -422,7 +422,7 @@ static int c_show(struct seq_file *m, void *v)
+ 			seq_printf(m, "%s ", hwcap_str[i]);
+ #ifdef CONFIG_ARMV7_COMPAT_CPUINFO
+ 	/* Print out the non-optional ARMv8 HW capabilities */
+-	seq_printf(m, "wp half thumb fastmult vfp edsp neon vfpv3d16 tlsi ");
++	seq_printf(m, "wp half thumb fastmult vfp edsp neon vfpv3 tlsi ");
+ 	seq_printf(m, "vfpv4 idiva idivt ");
+ #endif
+ 
+-- 
+1.7.9.5
+

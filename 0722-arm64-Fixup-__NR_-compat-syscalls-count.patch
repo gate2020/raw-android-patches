@@ -1,0 +1,30 @@
+From f884d7fae12bd203a2243883e320a0c59168deb3 Mon Sep 17 00:00:00 2001
+From: JP Abgrall <jpa@google.com>
+Date: Wed, 17 Sep 2014 19:26:43 -0700
+Subject: [PATCH 722/722] arm64: Fixup __NR_* compat syscalls count.
+
+Should have gone in the cherry-pick
+  cfc7e99e9e3900056028a7d90072e9ea0d886f8d
+   arm64: Add __NR_* definitions for compat syscalls
+
+Change-Id: I69a69e4b1f206aad4ece1a8b06f9e23e99adcbfb
+---
+ arch/arm64/include/asm/unistd.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/include/asm/unistd.h b/arch/arm64/include/asm/unistd.h
+index 38f8799..a8f8f69 100644
+--- a/arch/arm64/include/asm/unistd.h
++++ b/arch/arm64/include/asm/unistd.h
+@@ -40,7 +40,7 @@
+ #define __ARM_NR_compat_cacheflush	(__ARM_NR_COMPAT_BASE+2)
+ #define __ARM_NR_compat_set_tls		(__ARM_NR_COMPAT_BASE+5)
+ 
+-#define __NR_compat_syscalls		383
++#define __NR_compat_syscalls		378
+ #endif
+ 
+ #define __ARCH_WANT_SYS_CLONE
+-- 
+1.7.9.5
+

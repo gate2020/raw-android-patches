@@ -1,0 +1,38 @@
+From 8d0e99be244a647f8f0dd8741238446088e1c30f Mon Sep 17 00:00:00 2001
+From: Yann Soubeyrand <ysoubeyrand@adeneo-embedded.com>
+Date: Wed, 18 Jun 2014 14:57:29 +0200
+Subject: [PATCH 612/722] net: wireless: fix misplaced #endif in
+ net/wireless/nl80211.c
+
+The patch "nl80211: cumulative vendor command support patch" introduced
+compilation error in file net/wireless/nl80211.c. The nl80211_vendor_mcgrp
+variable is defined only if the CONFIG_NL80211_TESTMODE preprocessor constant
+is defined. However, this variable is later used wether
+CONFIG_NL80211_TESTMODE is defined or not. The cause is a misplaced #endif.
+
+Change-Id: I466488285578d57e6554a1f8ebe71d4f3385ecf2
+Signed-off-by: Dmitry Shmidt <dimitrysh@google.com>
+---
+ net/wireless/nl80211.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 150a38f..ec1356f 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -10973,11 +10973,11 @@ int nl80211_init(void)
+ 	err = genl_register_mc_group(&nl80211_fam, &nl80211_testmode_mcgrp);
+ 	if (err)
+ 		goto err_out;
+-#endif
+ 
+ 	err = genl_register_mc_group(&nl80211_fam, &nl80211_vendor_mcgrp);
+ 	if (err)
+ 		goto err_out;
++#endif
+ 
+ 	err = netlink_register_notifier(&nl80211_netlink_notifier);
+ 	if (err)
+-- 
+1.7.9.5
+

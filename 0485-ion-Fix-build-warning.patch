@@ -1,0 +1,36 @@
+From e513299f8dc0a79e6e3f5ee79615426edaf086b9 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Thu, 12 Dec 2013 19:09:47 -0800
+Subject: [PATCH 485/722] ion: Fix build warning
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add #include <linux/device.h> to fix the following warning seen
+with gcc 4.7.3:
+
+In file included from drivers/staging/android/ion/ion_heap.c:26:0:
+drivers/staging/android/ion/ion_priv.h:358:21: warning: ‘struct device’ declared inside parameter list [enabled by default]
+drivers/staging/android/ion/ion_priv.h:358:21: warning: its scope is only this definition or declaration, which is probably not what you want [enabled by default]
+
+Change-Id: Icc249b32d877a5b76b1669c99bef2b05d9e322da
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ drivers/staging/android/ion/ion_priv.h |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/android/ion/ion_priv.h b/drivers/staging/android/ion/ion_priv.h
+index 19691c0..ac625b1 100644
+--- a/drivers/staging/android/ion/ion_priv.h
++++ b/drivers/staging/android/ion/ion_priv.h
+@@ -17,6 +17,7 @@
+ #ifndef _ION_PRIV_H
+ #define _ION_PRIV_H
+ 
++#include <linux/device.h>
+ #include <linux/dma-direction.h>
+ #include <linux/kref.h>
+ #include <linux/mm_types.h>
+-- 
+1.7.9.5
+

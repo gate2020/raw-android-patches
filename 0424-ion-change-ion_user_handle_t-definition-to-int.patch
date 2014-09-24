@@ -1,0 +1,80 @@
+From dcd2da8015c7ac2da6f57fc0d8c15b80e44c4aed Mon Sep 17 00:00:00 2001
+From: Rom Lemarchand <romlem@google.com>
+Date: Wed, 23 Oct 2013 19:30:58 -0700
+Subject: [PATCH 424/722] ion: change ion_user_handle_t definition to int
+
+Turn ion_user_handle_t to int. This change reflects the underlying type
+returned by the ion driver.
+
+Change-Id: I40390dae8138327769510525bf62e55877a4b37d
+Signed-off-by: Rom Lemarchand <romlem@google.com>
+---
+ drivers/gpu/ion/ion.c |    8 ++++----
+ include/linux/ion.h   |    4 ++--
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/gpu/ion/ion.c b/drivers/gpu/ion/ion.c
+index 8fe7d52..c4d0a48 100644
+--- a/drivers/gpu/ion/ion.c
++++ b/drivers/gpu/ion/ion.c
+@@ -1139,7 +1139,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		if (IS_ERR(handle))
+ 			return PTR_ERR(handle);
+ 
+-		data.handle = (ion_user_handle_t)handle->id;
++		data.handle = handle->id;
+ 
+ 		if (copy_to_user((void __user *)arg, &data, sizeof(data))) {
+ 			ion_free(client, handle);
+@@ -1156,7 +1156,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 				   sizeof(struct ion_handle_data)))
+ 			return -EFAULT;
+ 		mutex_lock(&client->lock);
+-		handle = ion_uhandle_get(client, (int)data.handle);
++		handle = ion_uhandle_get(client, data.handle);
+ 		mutex_unlock(&client->lock);
+ 		if (!handle)
+ 			return -EINVAL;
+@@ -1171,7 +1171,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 
+ 		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+ 			return -EFAULT;
+-		handle = ion_uhandle_get(client, (int)data.handle);
++		handle = ion_uhandle_get(client, data.handle);
+ 		data.fd = ion_share_dma_buf_fd(client, handle);
+ 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+ 			return -EFAULT;
+@@ -1191,7 +1191,7 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		if (IS_ERR(handle))
+ 			ret = PTR_ERR(handle);
+ 		else
+-			data.handle = (ion_user_handle_t)handle->id;
++			data.handle = handle->id;
+ 
+ 		if (copy_to_user((void __user *)arg, &data,
+ 				 sizeof(struct ion_fd_data)))
+diff --git a/include/linux/ion.h b/include/linux/ion.h
+index 40ea332..5771f8c 100644
+--- a/include/linux/ion.h
++++ b/include/linux/ion.h
+@@ -19,8 +19,7 @@
+ 
+ #include <linux/types.h>
+ 
+-struct ion_handle;
+-typedef struct ion_handle *ion_user_handle_t;
++typedef int ion_user_handle_t;
+ 
+ /**
+  * enum ion_heap_types - list of all possible types of heaps
+@@ -65,6 +64,7 @@ enum ion_heap_type {
+ 					   caches must be managed manually */
+ 
+ #ifdef __KERNEL__
++struct ion_handle;
+ struct ion_device;
+ struct ion_heap;
+ struct ion_mapper;
+-- 
+1.7.9.5
+

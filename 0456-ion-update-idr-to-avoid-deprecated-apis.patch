@@ -1,0 +1,57 @@
+From acd77fc7d05a80e7ae39e64e1a3948487e2255ff Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Thu, 19 Sep 2013 14:54:56 -0500
+Subject: [PATCH 456/722] ion: update idr to avoid deprecated apis
+
+Use idr_alloc instead if idr_pre_get/idr_get_new_above, and
+remove idr_remove_all.
+
+Change-Id: I675b789879549bd3767ed3ef2016cf108eb622d2
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion.c |   17 +++++------------
+ 1 file changed, 5 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 4d19716..80c7945 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -432,22 +432,16 @@ static bool ion_handle_validate(struct ion_client *client, struct ion_handle *ha
+ 
+ static int ion_handle_add(struct ion_client *client, struct ion_handle *handle)
+ {
+-	int rc;
++	int id;
+ 	struct rb_node **p = &client->handles.rb_node;
+ 	struct rb_node *parent = NULL;
+ 	struct ion_handle *entry;
+ 
+-	do {
+-		int id;
+-		rc = idr_pre_get(&client->idr, GFP_KERNEL);
+-		if (!rc)
+-			return -ENOMEM;
+-		rc = idr_get_new_above(&client->idr, handle, 1, &id);
+-		handle->id = id;
+-	} while (rc == -EAGAIN);
++	id = idr_alloc(&client->idr, handle, 1, 0, GFP_KERNEL);
++	if (id < 0)
++		return id;
+ 
+-	if (rc < 0)
+-		return rc;
++	handle->id = id;
+ 
+ 	while (*p) {
+ 		parent = *p;
+@@ -786,7 +780,6 @@ void ion_client_destroy(struct ion_client *client)
+ 		ion_handle_destroy(&handle->ref);
+ 	}
+ 
+-	idr_remove_all(&client->idr);
+ 	idr_destroy(&client->idr);
+ 
+ 	down_write(&dev->lock);
+-- 
+1.7.9.5
+

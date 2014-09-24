@@ -1,0 +1,36 @@
+From 79245d37165aad2e57b1919defdd124639ddf55a Mon Sep 17 00:00:00 2001
+From: Bintian Wang <bintian.wang@linaro.org>
+Date: Sun, 30 Jun 2013 20:34:24 +0800
+Subject: [PATCH 403/722] Add compat_ioctl support for
+ VFAT_IOCTL_GET_VOLUME_ID
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add VFAT_IOCTL_GET_VOLUME_ID to vfat dir compat_ioctl() interface,
+which enable you read vfat volume ID from a 32bit app on a 64bit
+kernel
+
+Change-Id: I3e93dfcc1e7a364a6b11bc7e3f5f210e82f306ed
+Signed-off-by: Bintian Wang <bintian.wang@linaro.org>
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ fs/fat/dir.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/fs/fat/dir.c b/fs/fat/dir.c
+index ddfa452..4b775e6 100644
+--- a/fs/fat/dir.c
++++ b/fs/fat/dir.c
+@@ -841,6 +841,8 @@ static long fat_compat_dir_ioctl(struct file *filp, unsigned cmd,
+ 		short_only = 0;
+ 		both = 1;
+ 		break;
++	case VFAT_IOCTL_GET_VOLUME_ID:
++		return fat_ioctl_volume_id(inode);
+ 	default:
+ 		return fat_generic_ioctl(filp, cmd, (unsigned long)arg);
+ 	}
+-- 
+1.7.9.5
+

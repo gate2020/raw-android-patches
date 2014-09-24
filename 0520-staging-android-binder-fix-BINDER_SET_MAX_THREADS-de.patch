@@ -1,0 +1,43 @@
+From a0bd9ce4b5492666ffdbfe1cb71b236900a4a64e Mon Sep 17 00:00:00 2001
+From: Serban Constantinescu <serban.constantinescu@arm.com>
+Date: Thu, 4 Jul 2013 10:54:44 +0100
+Subject: [PATCH 520/722] staging: android: binder: fix BINDER_SET_MAX_THREADS
+ declaration
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This change will fix the BINDER_SET_MAX_THREADS ioctl to use __u32
+instead of size_t for setting the max threads. Thus using the same
+handler for 32 and 64bit kernels.
+
+This value is stored internally in struct binder_proc and set to 15
+on open_binder() in the libbinder API(thus no need for a 64bit size_t
+on 64bit platforms).
+
+The change does not affect existing 32bit ABI.
+
+Change-Id: Ibdfe10a70d475a91c247dc36e9cfd74a259d50e4
+Signed-off-by: Serban Constantinescu <serban.constantinescu@arm.com>
+Acked-by: Arve Hjønnevåg <arve@android.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/uapi/binder.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/uapi/binder.h b/drivers/staging/android/uapi/binder.h
+index 9e19f64..db9abe3 100644
+--- a/drivers/staging/android/uapi/binder.h
++++ b/drivers/staging/android/uapi/binder.h
+@@ -86,7 +86,7 @@ struct binder_version {
+ 
+ #define BINDER_WRITE_READ		_IOWR('b', 1, struct binder_write_read)
+ #define	BINDER_SET_IDLE_TIMEOUT		_IOW('b', 3, __s64)
+-#define	BINDER_SET_MAX_THREADS		_IOW('b', 5, size_t)
++#define	BINDER_SET_MAX_THREADS		_IOW('b', 5, __u32)
+ #define	BINDER_SET_IDLE_PRIORITY	_IOW('b', 6, __s32)
+ #define	BINDER_SET_CONTEXT_MGR		_IOW('b', 7, __s32)
+ #define	BINDER_THREAD_EXIT		_IOW('b', 8, __s32)
+-- 
+1.7.9.5
+

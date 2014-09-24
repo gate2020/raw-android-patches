@@ -1,0 +1,59 @@
+From ddd0ec0672e38c79e815588bfd725d50bd15d657 Mon Sep 17 00:00:00 2001
+From: Wei Yongjun <yongjun_wei@trendmicro.com.cn>
+Date: Tue, 17 Dec 2013 11:20:22 +0800
+Subject: [PATCH 490/722] gpu: ion: fix sparse non static symbol warnings
+
+Fixes the following sparse warnings:
+
+drivers/staging/android/ion/tegra/tegra_ion.c:23:19: warning:
+ symbol 'idev' was not declared. Should it be static?
+drivers/staging/android/ion/tegra/tegra_ion.c:24:19: warning:
+ symbol 'tegra_user_mapper' was not declared. Should it be static?
+drivers/staging/android/ion/tegra/tegra_ion.c:25:5: warning:
+ symbol 'num_heaps' was not declared. Should it be static?
+drivers/staging/android/ion/tegra/tegra_ion.c:26:17: warning:
+ symbol 'heaps' was not declared. Should it be static?
+drivers/staging/android/ion/tegra/tegra_ion.c:28:5: warning:
+ symbol 'tegra_ion_probe' was not declared. Should it be static?
+drivers/staging/android/ion/tegra/tegra_ion.c:66:5: warning:
+ symbol 'tegra_ion_remove' was not declared. Should it be static?
+
+Signed-off-by: Wei Yongjun <yongjun_wei@trendmicro.com.cn>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/ion/tegra/tegra_ion.c |   11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/staging/android/ion/tegra/tegra_ion.c b/drivers/staging/android/ion/tegra/tegra_ion.c
+index 4b3d93f..3474c65 100644
+--- a/drivers/staging/android/ion/tegra/tegra_ion.c
++++ b/drivers/staging/android/ion/tegra/tegra_ion.c
+@@ -20,12 +20,11 @@
+ #include "../ion.h"
+ #include "../ion_priv.h"
+ 
+-struct ion_device *idev;
+-struct ion_mapper *tegra_user_mapper;
+-int num_heaps;
+-struct ion_heap **heaps;
++static struct ion_device *idev;
++static int num_heaps;
++static struct ion_heap **heaps;
+ 
+-int tegra_ion_probe(struct platform_device *pdev)
++static int tegra_ion_probe(struct platform_device *pdev)
+ {
+ 	struct ion_platform_data *pdata = pdev->dev.platform_data;
+ 	int err;
+@@ -63,7 +62,7 @@ err:
+ 	return err;
+ }
+ 
+-int tegra_ion_remove(struct platform_device *pdev)
++static int tegra_ion_remove(struct platform_device *pdev)
+ {
+ 	struct ion_device *idev = platform_get_drvdata(pdev);
+ 	int i;
+-- 
+1.7.9.5
+

@@ -1,0 +1,56 @@
+From c69de844c80884167bb42243b36498dde81eebf6 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Thu, 19 Dec 2013 18:37:49 -0800
+Subject: [PATCH 501/722] ion: fix overflow and list bugs in system heap
+
+Fix a few bugs in ion_system_heap:
+
+Initialize the list node in the info block.
+
+Don't store size_remaining in a signed long, allocating >2GB
+could overflow, resulting in a call to sg_alloc_table with
+nents=0 which panics.  alloc_largest_available will never
+return a block larger than size_remanining, so it can never
+go negative.
+
+Limit a single allocation to half of all memory.  Prevents a
+large allocation from taking down the whole system.
+
+Change-Id: I7fcbd7e1d5b4d482d7612d80b6c9e8e24466f1d8
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_system_heap.c |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion_system_heap.c b/drivers/staging/android/ion/ion_system_heap.c
+index a2c8968..a052418 100644
+--- a/drivers/staging/android/ion/ion_system_heap.c
++++ b/drivers/staging/android/ion/ion_system_heap.c
+@@ -124,6 +124,7 @@ static struct page_info *alloc_largest_available(struct ion_system_heap *heap,
+ 
+ 		info->page = page;
+ 		info->order = orders[i];
++		INIT_LIST_HEAD(&info->list);
+ 		return info;
+ 	}
+ 	kfree(info);
+@@ -145,12 +146,15 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
+ 	struct list_head pages;
+ 	struct page_info *info, *tmp_info;
+ 	int i = 0;
+-	long size_remaining = PAGE_ALIGN(size);
++	unsigned long size_remaining = PAGE_ALIGN(size);
+ 	unsigned int max_order = orders[0];
+ 
+ 	if (align > PAGE_SIZE)
+ 		return -EINVAL;
+ 
++	if (size / PAGE_SIZE > totalram_pages / 2)
++		return -ENOMEM;
++
+ 	INIT_LIST_HEAD(&pages);
+ 	while (size_remaining > 0) {
+ 		info = alloc_largest_available(sys_heap, buffer, size_remaining,
+-- 
+1.7.9.5
+

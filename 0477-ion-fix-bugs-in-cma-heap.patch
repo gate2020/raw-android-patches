@@ -1,0 +1,68 @@
+From 8069739d23200f68b59570f6c4c5a8ec66f38fab Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Wed, 27 Nov 2013 15:53:21 -0800
+Subject: [PATCH 477/722] ion: fix bugs in cma heap
+
+Implement ion_cma_unmap_kernel, ion will call it unconditionally.
+Use correct gfp flags when calling dma_alloc_coherent so it doesn't
+try to use atomic DMA memory.
+Check for invalid alignment when allocating.
+Reject cached allocations - the cpu address returned by
+dma_alloc_coherent is always going to be an uncached mapping, so
+map_kernel will not see data written by a cached userspace mapping.
+
+Change-Id: I2ea03f28fae3749f6de0b89700b69da3845926ea
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_cma_heap.c |   15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion_cma_heap.c b/drivers/staging/android/ion/ion_cma_heap.c
+index 58c497c..4418bda 100644
+--- a/drivers/staging/android/ion/ion_cma_heap.c
++++ b/drivers/staging/android/ion/ion_cma_heap.c
+@@ -69,13 +69,20 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
+ 
+ 	dev_dbg(dev, "Request buffer allocation len %ld\n", len);
+ 
++	if (buffer->flags & ION_FLAG_CACHED)
++		return -EINVAL;
++
++	if (align > PAGE_SIZE)
++		return -EINVAL;
++
+ 	info = kzalloc(sizeof(struct ion_cma_buffer_info), GFP_KERNEL);
+ 	if (!info) {
+ 		dev_err(dev, "Can't allocate buffer info\n");
+ 		return ION_CMA_ALLOCATE_FAILED;
+ 	}
+ 
+-	info->cpu_addr = dma_alloc_coherent(dev, len, &(info->handle), 0);
++	info->cpu_addr = dma_alloc_coherent(dev, len, &(info->handle),
++						GFP_HIGHUSER | __GFP_ZERO);
+ 
+ 	if (!info->cpu_addr) {
+ 		dev_err(dev, "Fail to allocate buffer\n");
+@@ -170,6 +177,11 @@ static void *ion_cma_map_kernel(struct ion_heap *heap,
+ 	return info->cpu_addr;
+ }
+ 
++static void ion_cma_unmap_kernel(struct ion_heap *heap,
++					struct ion_buffer *buffer)
++{
++}
++
+ static struct ion_heap_ops ion_cma_ops = {
+ 	.allocate = ion_cma_allocate,
+ 	.free = ion_cma_free,
+@@ -178,6 +190,7 @@ static struct ion_heap_ops ion_cma_ops = {
+ 	.phys = ion_cma_phys,
+ 	.map_user = ion_cma_mmap,
+ 	.map_kernel = ion_cma_map_kernel,
++	.unmap_kernel = ion_cma_unmap_kernel,
+ };
+ 
+ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data)
+-- 
+1.7.9.5
+

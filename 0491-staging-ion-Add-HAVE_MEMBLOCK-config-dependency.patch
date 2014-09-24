@@ -1,0 +1,41 @@
+From d232ba2bea468a7d12d826d0fe62b3f8a9ba8d10 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Mon, 16 Dec 2013 21:07:51 -0800
+Subject: [PATCH 491/722] staging: ion: Add HAVE_MEMBLOCK config dependency
+
+The kbuild test robot reported a build issue w/ ION on m68k:
+
+drivers/staging/android/ion/ion.c: In function 'ion_reserve':
+drivers/staging/android/ion/ion.c:1526:4: error: implicit declaration of function 'memblock_alloc_base' [-Werror=implicit-function-declaration]
+drivers/staging/android/ion/ion.c:1528:11: error: 'MEMBLOCK_ALLOC_ANYWHERE' undeclared (first use in this function)
+drivers/staging/android/ion/ion.c:1528:11: note: each undeclared identifier is reported only once for each function it appears in
+drivers/staging/android/ion/ion.c:1537:4: error: implicit declaration of function 'memblock_reserve' [-Werror=implicit-function-declaration]
+   cc1: some warnings being treated as errors
+
+This is caused by ION using memblock functionality which m68k doesn't support.
+
+This patch adds a HAVE_MEMBLOCK dependency to the ION config.
+
+Acked-by: Colin Cross <ccross@android.com>
+Cc: Android Kernel Team <kernel-team@android.com>
+Reported-by: kbuild test robot <fengguang.wu@intel.com>
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/ion/Kconfig |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/android/ion/Kconfig b/drivers/staging/android/ion/Kconfig
+index b95281e..a9a64ea 100644
+--- a/drivers/staging/android/ion/Kconfig
++++ b/drivers/staging/android/ion/Kconfig
+@@ -1,5 +1,6 @@
+ menuconfig ION
+ 	bool "Ion Memory Manager"
++	depends on HAVE_MEMBLOCK
+ 	select GENERIC_ALLOCATOR
+ 	select DMA_SHARED_BUFFER
+ 	---help---
+-- 
+1.7.9.5
+

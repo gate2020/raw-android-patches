@@ -1,0 +1,251 @@
+From ecff782253197463f33d719a4fed4bd39c8de469 Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Thu, 30 Jan 2014 15:10:39 -0800
+Subject: [PATCH 700/722] arm64: emulate the swp/swpb instruction
+
+The swp and spwb instructions were deprecated in ARMv6. ARMv8
+obsoleted the instruction. Despite this, many applications rely on
+these instruuctions.
+
+This patch starts with the version present in the arm architecture.
+However, it uses the ldx*()/stx*() functions to implement the handler
+in C code. It also removes a lot of code that is not needed.
+
+Change-Id: I6882fbe5f71bfa8f9e9a75d067b2111188c6f2fa
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/366097
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Tested-by: Oskari Jaaskelainen <oskarij@nvidia.com>
+
+Conflicts:
+	arch/arm64/Kconfig
+	arch/arm64/kernel/Makefile
+---
+ arch/arm64/Kconfig              |   26 +++++++
+ arch/arm64/kernel/Makefile      |    3 +
+ arch/arm64/kernel/swp_emulate.c |  155 +++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 184 insertions(+)
+ create mode 100644 arch/arm64/kernel/swp_emulate.c
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 437dd6c..787cee3 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -152,6 +152,31 @@ config NR_CPUS
+ 	depends on SMP
+ 	default "4"
+ 
++config SWP_EMULATE
++	bool "Emulate SWP/SWPB instructions"
++	help
++	  ARMv6 architecture deprecates use of the SWP/SWPB instructions. ARMv8
++	  oblosetes the use of SWP/SWPB instructions. ARMv7 multiprocessing
++	  extensions introduce the ability to disable these instructions,
++	  triggering an undefined instruction exception when executed. Say Y
++	  here to enable software emulation of these instructions for userspace
++	  (not kernel) using LDREX/STREX. Also creates /proc/cpu/swp_emulation
++	  for statistics.
++
++	  In some older versions of glibc [<=2.8] SWP is used during futex
++	  trylock() operations with the assumption that the code will not
++	  be preempted. This invalid assumption may be more likely to fail
++	  with SWP emulation enabled, leading to deadlock of the user
++	  application.
++
++	  NOTE: when accessing uncached shared regions, LDREX/STREX rely
++	  on an external transaction monitoring block called a global
++	  monitor to maintain update atomicity. If your system does not
++	  implement a global monitor, this option can cause programs that
++	  perform SWP operations to uncached memory to deadlock.
++
++	  If unsure, say Y.
++
+ source kernel/Kconfig.preempt
+ 
+ config HZ
+@@ -185,6 +210,7 @@ config HW_PERF_EVENTS
+ config ARMV7_COMPAT
+ 	bool "Kernel support for ARMv7 applications"
+ 	depends on COMPAT
++	select SWP_EMULATE
+ 	help
+ 	 This option enables features that allow that ran on an ARMv7 or older
+ 	 processor to continue functioning.
+diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
+index d7ff191..3e67066 100644
+--- a/arch/arm64/kernel/Makefile
++++ b/arch/arm64/kernel/Makefile
+@@ -18,6 +18,9 @@ arm64-obj-$(CONFIG_SMP)			+= smp.o smp_spin_table.o smp_psci.o
+ arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
+ arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)+= hw_breakpoint.o
+ arm64-obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
++arm64-obj-$(CONFIG_ARM_CPU_SUSPEND)	+= sleep.o suspend.o
++
++obj-$(CONFIG_SWP_EMULATE)	+= swp_emulate.o
+ 
+ obj-y					+= $(arm64-obj-y) vdso/
+ obj-m					+= $(arm64-obj-m)
+diff --git a/arch/arm64/kernel/swp_emulate.c b/arch/arm64/kernel/swp_emulate.c
+new file mode 100644
+index 0000000..05ffe59
+--- /dev/null
++++ b/arch/arm64/kernel/swp_emulate.c
+@@ -0,0 +1,155 @@
++/*
++ *  Derived from from linux/arch/arm/kernel/swp_emulate.c
++ *
++ *  Copyright (C) 2009 ARM Limited
++ *  Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ *  Implements emulation of the SWP/SWPB instructions using load-exclusive and
++ *  store-exclusive for processors that have them disabled (or future ones that
++ *  might not implement them).
++ *
++ *  Syntax of SWP{B} instruction: SWP{B}<c> <Rt>, <Rt2>, [<Rn>]
++ *  Where: Rt  = destination
++ *	   Rt2 = source
++ *	   Rn  = address
++ */
++
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++#include <linux/sched.h>
++#include <linux/syscalls.h>
++#include <linux/perf_event.h>
++
++#include <asm/opcodes.h>
++#include <asm/traps.h>
++#include <asm/uaccess.h>
++#include <asm/system_misc.h>
++#include <linux/debugfs.h>
++
++/*
++ * Macros/defines for extracting register numbers from instruction.
++ */
++#define EXTRACT_REG_NUM(instruction, offset) \
++	(((instruction) & (0xf << (offset))) >> (offset))
++#define RN_OFFSET  16
++#define RT_OFFSET  12
++#define RT2_OFFSET  0
++/*
++ * Bit 22 of the instruction encoding distinguishes between
++ * the SWP and SWPB variants (bit set means SWPB).
++ */
++#define TYPE_SWPB (1 << 22)
++
++static pid_t previous_pid;
++
++u64 swpb_count = 0;
++u64 swp_count = 0;
++
++/*
++ * swp_handler logs the id of calling process, dissects the instruction, sanity
++ * checks the memory location, calls emulate_swpX for the actual operation and
++ * deals with fixup/error handling before returning
++ */
++static int swp_handler(struct pt_regs *regs, unsigned int instr)
++{
++	u32 address_reg, destreg, data, type;
++	uintptr_t address;
++	unsigned int res = 0;
++	u32 temp32;
++	u8 temp8;
++
++	perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS, 1, regs, regs->pc);
++
++	res = arm_check_condition(instr, regs->pstate);
++	switch (res) {
++	case ARM_OPCODE_CONDTEST_PASS:
++		break;
++	case ARM_OPCODE_CONDTEST_FAIL:
++		/* Condition failed - return to next instruction */
++		regs->pc += 4;
++		return 0;
++	case ARM_OPCODE_CONDTEST_UNCOND:
++		/* If unconditional encoding - not a SWP, undef */
++		return -EFAULT;
++	default:
++		return -EINVAL;
++	}
++
++	if (current->pid != previous_pid) {
++		pr_warn("\"%s\" (%ld) uses obsolete SWP{B} instruction\n",
++			 current->comm, (unsigned long)current->pid);
++		previous_pid = current->pid;
++	}
++
++	address = regs->regs[EXTRACT_REG_NUM(instr, RN_OFFSET)] & 0xffffffff;
++	data = regs->regs[EXTRACT_REG_NUM(instr, RT2_OFFSET)];
++	destreg = EXTRACT_REG_NUM(instr, RT_OFFSET);
++
++	type = instr & TYPE_SWPB;
++
++	/* Check access in reasonable access range for both SWP and SWPB */
++	if (!access_ok(VERIFY_WRITE, (address & ~3), 4)) {
++		pr_debug("SWP{B} emulation: access to %p not allowed!\n",
++			 (void *)address);
++		res = -EFAULT;
++	}
++	if (type == TYPE_SWPB) {
++		do {
++			temp8 = ldax8((u8 *) address);
++		} while (stx8((u8 *) address, (u8) data));
++		regs->regs[destreg] = temp8;
++		regs->pc += 4;
++		swpb_count++;
++	} else if (address & 0x3) {
++		/* SWP to unaligned address not permitted */
++		pr_debug("SWP instruction on unaligned pointer!\n");
++		return -EFAULT;
++	} else {
++		do {
++			temp32 = ldax32((u32 *) address);
++		} while (stlx32((u32 *) address, (u32) data));
++		regs->regs[destreg] = temp32;
++		regs->pc += 4;
++		swp_count++;
++	}
++
++	return 0;
++}
++
++/*
++ * Only emulate SWP/SWPB executed in ARM state/User mode.
++ * The kernel must be SWP free and SWP{B} does not exist in Thumb/ThumbEE.
++ */
++static struct undef_hook swp_hook = {
++	.instr_mask	= 0x0fb00ff0,
++	.instr_val	= 0x01000090,
++	.pstate_mask	= COMPAT_PSR_MODE_MASK | COMPAT_PSR_T_BIT,
++	.pstate_val	= COMPAT_PSR_MODE_USR,
++	.fn		= swp_handler
++};
++
++/*
++ * Register handler and create status file in /proc/cpu
++ * Invoked as late_initcall, since not needed before init spawned.
++ */
++static int __init swp_emulation_init(void)
++{
++	struct dentry *dir;
++	dir = debugfs_create_dir("swp_emulate", NULL);
++	debugfs_create_u64("swp_count", S_IRUGO | S_IWUSR, dir, &swp_count);
++	debugfs_create_u64("swpb_count", S_IRUGO | S_IWUSR, dir, &swpb_count);
++
++	pr_notice("Registering SWP/SWPB emulation handler\n");
++	register_undef_hook(&swp_hook);
++
++
++	return 0;
++}
++
++late_initcall(swp_emulation_init);
+-- 
+1.7.9.5
+

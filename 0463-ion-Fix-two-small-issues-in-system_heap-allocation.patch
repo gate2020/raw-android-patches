@@ -1,0 +1,49 @@
+From 818017a0caa6b7b3bb6e96697a2c35806e08f6a4 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Fri, 22 Nov 2013 15:36:27 -0800
+Subject: [PATCH 463/722] ion: Fix two small issues in system_heap allocation
+
+In testing ion system heap allocations, I ran across two issues:
+
+1) Not k*z*allocing the sg table. This can cause trouble if
+we end up trying call sg_alloc_table() with too many entries,
+then sg_alloc_table() internally fails and tries to free what it
+thinks is internal table structure, which causes bad pointer
+traversals.
+
+2) The second list_for_each_entry probably should be _safe,
+since I was seeing  strange lock warnings and oopses on occasion.
+This seems to resolve it, but could use some extra checking.
+
+Change-Id: I59d4c90104a8cf23dc4ae814d0b17348f1b68ac0
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ drivers/staging/android/ion/ion_system_heap.c |    5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion_system_heap.c b/drivers/staging/android/ion/ion_system_heap.c
+index 5b9c0e0..5926be9 100644
+--- a/drivers/staging/android/ion/ion_system_heap.c
++++ b/drivers/staging/android/ion/ion_system_heap.c
+@@ -166,8 +166,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
+ 		max_order = info->order;
+ 		i++;
+ 	}
+-
+-	table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
++	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+ 	if (!table)
+ 		goto err;
+ 
+@@ -189,7 +188,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
+ err1:
+ 	kfree(table);
+ err:
+-	list_for_each_entry(info, &pages, list) {
++	list_for_each_entry_safe(info, tmp_info, &pages, list) {
+ 		free_buffer_page(sys_heap, buffer, info->page, info->order);
+ 		kfree(info);
+ 	}
+-- 
+1.7.9.5
+

@@ -1,0 +1,33 @@
+From 2e0602939baf22b8f9057f7626c189248383d4ae Mon Sep 17 00:00:00 2001
+From: Rich Wiley <rwiley@nvidia.com>
+Date: Wed, 4 Jun 2014 11:44:03 -0700
+Subject: [PATCH 706/722] arm64: enable deprecated SETEND instruction in SCTLR
+ compat config
+
+Change-Id: I703d4843f8aab2ec63324f04cc13aaabae88e163
+Signed-off-by: Rich Wiley <rwiley@nvidia.com>
+Reviewed-on: http://git-master/r/422174
+GVS: Gerrit_Virtual_Submit
+Reviewed-by: Alexander Van Brunt <avanbrunt@nvidia.com>
+Reviewed-by: Bharat Nihalani <bnihalani@nvidia.com>
+Tested-by: Bharat Nihalani <bnihalani@nvidia.com>
+---
+ arch/arm64/mm/proc.S |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+index 9796b33..3e5dcd9 100644
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -172,7 +172,7 @@ ENDPROC(__cpu_setup)
+ 	.type	crval, #object
+ crval:
+ 	.word	0x030802e2			// clear
+-	.word	0x0405d13d			// set
++	.word	0x0405d03d			// set
+ #else
+ 	/*
+ 	 *                 n n            T
+-- 
+1.7.9.5
+

@@ -1,0 +1,47 @@
+From 59472af5848e3063c149baa92a35882ce3f6f291 Mon Sep 17 00:00:00 2001
+From: kbuild test robot <fengguang.wu@intel.com>
+Date: Tue, 24 Sep 2013 08:21:29 +0800
+Subject: [PATCH 667/722] crypto: ablk_helper - Replace memcpy with struct
+ assignment
+
+tree:   git://git.kernel.org/pub/scm/linux/kernel/git/herbert/cryptodev-2.6.git master
+head:   48e6dc1b2a1ad8186d48968d5018912bdacac744
+commit: a62b01cd6cc1feb5e80d64d6937c291473ed82cb [20/24] crypto: create generic version of ablk_helper
+
+coccinelle warnings: (new ones prefixed by >>)
+
+>> crypto/ablk_helper.c:97:2-8: Replace memcpy with struct assignment
+>> crypto/ablk_helper.c:78:2-8: Replace memcpy with struct assignment
+
+Please consider folding the attached diff :-)
+
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ crypto/ablk_helper.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/crypto/ablk_helper.c b/crypto/ablk_helper.c
+index 62568b1..ffe7278 100644
+--- a/crypto/ablk_helper.c
++++ b/crypto/ablk_helper.c
+@@ -75,7 +75,7 @@ int ablk_encrypt(struct ablkcipher_request *req)
+ 		struct ablkcipher_request *cryptd_req =
+ 			ablkcipher_request_ctx(req);
+ 
+-		memcpy(cryptd_req, req, sizeof(*req));
++		*cryptd_req = *req;
+ 		ablkcipher_request_set_tfm(cryptd_req, &ctx->cryptd_tfm->base);
+ 
+ 		return crypto_ablkcipher_encrypt(cryptd_req);
+@@ -94,7 +94,7 @@ int ablk_decrypt(struct ablkcipher_request *req)
+ 		struct ablkcipher_request *cryptd_req =
+ 			ablkcipher_request_ctx(req);
+ 
+-		memcpy(cryptd_req, req, sizeof(*req));
++		*cryptd_req = *req;
+ 		ablkcipher_request_set_tfm(cryptd_req, &ctx->cryptd_tfm->base);
+ 
+ 		return crypto_ablkcipher_decrypt(cryptd_req);
+-- 
+1.7.9.5
+

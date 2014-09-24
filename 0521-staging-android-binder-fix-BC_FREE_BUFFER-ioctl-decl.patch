@@ -1,0 +1,52 @@
+From 032f0c2707ac7f21114eda0889bacda10156a2da Mon Sep 17 00:00:00 2001
+From: Serban Constantinescu <serban.constantinescu@arm.com>
+Date: Thu, 4 Jul 2013 10:54:45 +0100
+Subject: [PATCH 521/722] staging: android: binder: fix BC_FREE_BUFFER ioctl
+ declaration
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BinderDriverCommands mirror the ioctl usage. Thus the size of the
+structure passed through the interface should be used to generate the
+ioctl No.
+
+The change reflects the type being passed from the user space-a pointer
+to a binder_buffer. This change should not affect the existing 32bit
+user space since BC_FREE_BUFFER is computed as:
+
+   #define _IOW(type,nr,size)         \
+      ((type) << _IOC_TYPESHIFT) |    \
+      ((nr)   << _IOC_NRSHIFT) |      \
+      ((size) << _IOC_SIZESHIFT))
+
+and for a 32bit compiler BC_FREE_BUFFER will have the same computed
+value. This change will also ease our work in differentiating
+BC_FREE_BUFFER from COMPAT_BC_FREE_BUFFER.
+
+The change does not affect existing 32bit ABI.
+
+Change-Id: I2e0ae87bc4e913225a8eb2912913f7e3617cb575
+Signed-off-by: Serban Constantinescu <serban.constantinescu@arm.com>
+Acked-by: Arve Hjønnevåg <arve@android.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/uapi/binder.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/uapi/binder.h b/drivers/staging/android/uapi/binder.h
+index db9abe3..3de85af 100644
+--- a/drivers/staging/android/uapi/binder.h
++++ b/drivers/staging/android/uapi/binder.h
+@@ -265,7 +265,7 @@ enum binder_driver_command_protocol {
+ 	 * Else you have acquired a primary reference on the object.
+ 	 */
+ 
+-	BC_FREE_BUFFER = _IOW('c', 3, int),
++	BC_FREE_BUFFER = _IOW('c', 3, void *),
+ 	/*
+ 	 * void *: ptr to transaction data received on a read
+ 	 */
+-- 
+1.7.9.5
+

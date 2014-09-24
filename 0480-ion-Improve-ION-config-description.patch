@@ -1,0 +1,36 @@
+From 8f1c42284159ebd6851e1e75507f2ad6fba87d0f Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Thu, 7 Nov 2013 19:58:41 -0800
+Subject: [PATCH 480/722] ion: Improve ION config description
+
+Mostly just to quiet checkpatch warnings, be more verbose
+in describing the ION config option.
+
+Change-Id: I194235f1a68623dca15ae6e658fc99d00943a827
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ drivers/staging/android/ion/Kconfig |    8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/staging/android/ion/Kconfig b/drivers/staging/android/ion/Kconfig
+index 3215bd8..a342d96 100644
+--- a/drivers/staging/android/ion/Kconfig
++++ b/drivers/staging/android/ion/Kconfig
+@@ -2,8 +2,12 @@ menuconfig ION
+ 	tristate "Ion Memory Manager"
+ 	select GENERIC_ALLOCATOR
+ 	select DMA_SHARED_BUFFER
+-	help
+-	  Chose this option to enable the ION Memory Manager.
++	---help---
++	  Chose this option to enable the ION Memory Manager,
++	  used by Android to efficiently allocate buffers
++	  from userspace that can be shared between drivers.
++	  If you're not using Android its probably safe to
++	  say N here.
+ 
+ config ION_TEST
+ 	tristate "Ion Test Device"
+-- 
+1.7.9.5
+

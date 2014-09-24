@@ -1,0 +1,28 @@
+From 63ddadde39e91931890798084ef023ebab4b4a90 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Tue, 26 Nov 2013 13:43:29 -0800
+Subject: [PATCH 465/722] ion: add alignment check to carveout heap
+
+Change-Id: I25c752b3eacb48cccea5be2df319634b3affd331
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_carveout_heap.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/staging/android/ion/ion_carveout_heap.c b/drivers/staging/android/ion/ion_carveout_heap.c
+index ed2b7ae..128ee11 100644
+--- a/drivers/staging/android/ion/ion_carveout_heap.c
++++ b/drivers/staging/android/ion/ion_carveout_heap.c
+@@ -70,6 +70,9 @@ static int ion_carveout_heap_allocate(struct ion_heap *heap,
+ 				      unsigned long size, unsigned long align,
+ 				      unsigned long flags)
+ {
++	if (align > PAGE_SIZE)
++		return -EINVAL;
++
+ 	buffer->priv_phys = ion_carveout_allocate(heap, size, align);
+ 	return buffer->priv_phys == ION_CARVEOUT_ALLOCATE_FAIL ? -ENOMEM : 0;
+ }
+-- 
+1.7.9.5
+

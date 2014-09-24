@@ -1,0 +1,48 @@
+From 1f67f7520303192e46e1621639097007ab076b90 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Tue, 26 Nov 2013 15:33:33 -0800
+Subject: [PATCH 471/722] ion: allow cached mappings of chunk and system heap
+ buffers
+
+Now that ion_vm_fault uses vm_insert_pfn instead of vm_insert_page
+cached buffers can be supported in any heap.  Remove the checks
+in the chunk and system heaps.
+
+Change-Id: I371a44c400ed8a342c3b0eed90d0fb7060537697
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_chunk_heap.c  |    3 ---
+ drivers/staging/android/ion/ion_system_heap.c |    3 ---
+ 2 files changed, 6 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion_chunk_heap.c b/drivers/staging/android/ion/ion_chunk_heap.c
+index 60952a8..03af672 100644
+--- a/drivers/staging/android/ion/ion_chunk_heap.c
++++ b/drivers/staging/android/ion/ion_chunk_heap.c
+@@ -47,9 +47,6 @@ static int ion_chunk_heap_allocate(struct ion_heap *heap,
+ 	unsigned long num_chunks;
+ 	unsigned long allocated_size;
+ 
+-	if (ion_buffer_fault_user_mappings(buffer))
+-		return -ENOMEM;
+-
+ 	allocated_size = ALIGN(size, chunk_heap->chunk_size);
+ 	num_chunks = allocated_size / chunk_heap->chunk_size;
+ 
+diff --git a/drivers/staging/android/ion/ion_system_heap.c b/drivers/staging/android/ion/ion_system_heap.c
+index e3aec59..2930eb1 100644
+--- a/drivers/staging/android/ion/ion_system_heap.c
++++ b/drivers/staging/android/ion/ion_system_heap.c
+@@ -148,9 +148,6 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
+ 	if (align > PAGE_SIZE)
+ 		return -EINVAL;
+ 
+-	if (ion_buffer_fault_user_mappings(buffer))
+-		return -EINVAL;
+-
+ 	INIT_LIST_HEAD(&pages);
+ 	while (size_remaining > 0) {
+ 		info = alloc_largest_available(sys_heap, buffer, size_remaining, max_order);
+-- 
+1.7.9.5
+

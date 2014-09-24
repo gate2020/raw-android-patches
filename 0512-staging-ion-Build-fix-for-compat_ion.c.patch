@@ -1,0 +1,31 @@
+From d4e564429cb89a90b9d5482af884b0b6a85aa284 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Wed, 29 Jan 2014 13:00:51 -0800
+Subject: [PATCH 512/722] staging: ion: Build fix for compat_ion.c
+
+compat_get_ion_handle_data is missing a declaration for
+the return value.
+
+This patch simply adds it, so things build.
+
+Change-Id: I1a72a3c56975dc614322a63852f2a6554f2be107
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+---
+ drivers/staging/android/ion/compat_ion.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/android/ion/compat_ion.c b/drivers/staging/android/ion/compat_ion.c
+index fb0ebdd..a5e8c40 100644
+--- a/drivers/staging/android/ion/compat_ion.c
++++ b/drivers/staging/android/ion/compat_ion.c
+@@ -74,6 +74,7 @@ static int compat_get_ion_handle_data(
+ 			struct ion_handle_data __user *data)
+ {
+ 	compat_int_t i;
++	int err;
+ 
+ 	err = get_user(i, &data32->handle);
+ 	err |= put_user(i, &data->handle);
+-- 
+1.7.9.5
+

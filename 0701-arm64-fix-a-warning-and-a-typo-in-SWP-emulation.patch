@@ -1,0 +1,44 @@
+From d0c5e1444d3efbe361bb5e9fc0d8dd0aeb6ae2fb Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Tue, 18 Feb 2014 17:50:57 -0800
+Subject: [PATCH 701/722] arm64: fix a warning and a typo in SWP emulation
+
+The store-release-exclusive is missing the "L" that makes it a
+release rather than a normal store-exclusive.
+
+Remove a variable that is not used and causes a compiler warning.
+
+Change-Id: I91633a352b805ed9af450b632c9ee394235637c4
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/369076
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Reviewed-by: Automatic_Commit_Validation_User
+---
+ arch/arm64/kernel/swp_emulate.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/kernel/swp_emulate.c b/arch/arm64/kernel/swp_emulate.c
+index 05ffe59..1dd824e 100644
+--- a/arch/arm64/kernel/swp_emulate.c
++++ b/arch/arm64/kernel/swp_emulate.c
+@@ -58,7 +58,7 @@ u64 swp_count = 0;
+  */
+ static int swp_handler(struct pt_regs *regs, unsigned int instr)
+ {
+-	u32 address_reg, destreg, data, type;
++	u32 destreg, data, type;
+ 	uintptr_t address;
+ 	unsigned int res = 0;
+ 	u32 temp32;
+@@ -102,7 +102,7 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
+ 	if (type == TYPE_SWPB) {
+ 		do {
+ 			temp8 = ldax8((u8 *) address);
+-		} while (stx8((u8 *) address, (u8) data));
++		} while (stlx8((u8 *) address, (u8) data));
+ 		regs->regs[destreg] = temp8;
+ 		regs->pc += 4;
+ 		swpb_count++;
+-- 
+1.7.9.5
+

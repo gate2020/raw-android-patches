@@ -1,0 +1,27 @@
+From 49cc72365fb7ee87762a7ccc6a32ef68627216c5 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Thu, 3 Apr 2014 15:39:23 -0700
+Subject: [PATCH 561/722] cpufreq: interactive: turn boost_pulse off on boost
+ off
+
+Change-Id: I36fe217fa047d68ea90e78b12c7db4537ea8010b
+Signed-off-by: Ruchi Kandoi <kandoiruchi@google.com>
+---
+ drivers/cpufreq/cpufreq_interactive.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/cpufreq/cpufreq_interactive.c b/drivers/cpufreq/cpufreq_interactive.c
+index 9bf1a66..6a0137d 100644
+--- a/drivers/cpufreq/cpufreq_interactive.c
++++ b/drivers/cpufreq/cpufreq_interactive.c
+@@ -948,6 +948,7 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
+ 		trace_cpufreq_interactive_boost("on");
+ 		cpufreq_interactive_boost();
+ 	} else {
++		boostpulse_endtime = ktime_to_us(ktime_get());
+ 		trace_cpufreq_interactive_unboost("off");
+ 	}
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,35 @@
+From 597ff3a0f3ba6e471ce4dc93bf0b41abcebe9f8c Mon Sep 17 00:00:00 2001
+From: Catalin Marinas <catalin.marinas@arm.com>
+Date: Fri, 29 Aug 2014 16:08:02 +0100
+Subject: [PATCH 680/722] arm64: Add brackets around user_stack_pointer()
+
+Commit 5f888a1d33 (ARM64: perf: support dwarf unwinding in compat mode)
+changes user_stack_pointer() to return the compat SP for 32-bit tasks
+but without brackets around the whole definition, with possible issues
+on the call sites (noticed with a subsequent fix for KSTK_ESP).
+
+Fixes: 5f888a1d33c4 (ARM64: perf: support dwarf unwinding in compat mode)
+Reported-by: Sudeep Holla <sudeep.holla@arm.com>
+Cc: <stable@vger.kernel.org>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/include/asm/ptrace.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/include/asm/ptrace.h b/arch/arm64/include/asm/ptrace.h
+index c2a1997..7304fa2 100644
+--- a/arch/arm64/include/asm/ptrace.h
++++ b/arch/arm64/include/asm/ptrace.h
+@@ -131,7 +131,7 @@ struct pt_regs {
+ 	(!((regs)->pstate & PSR_F_BIT))
+ 
+ #define user_stack_pointer(regs) \
+-	(!compat_user_mode(regs)) ? ((regs)->sp) : ((regs)->compat_sp)
++	(!compat_user_mode(regs) ? (regs)->sp : (regs)->compat_sp)
+ 
+ /*
+  * Are the current registers suitable for user mode? (used to maintain
+-- 
+1.7.9.5
+

@@ -1,0 +1,32 @@
+From f56b1aa3553e8e75178a8f61f13d6d1ab896143c Mon Sep 17 00:00:00 2001
+From: JP Abgrall <jpa@google.com>
+Date: Wed, 27 Aug 2014 20:30:29 -0700
+Subject: [PATCH 655/722] arm: fixup NR_syscalls to accommodate the new
+ seccomp syscall
+
+This belongs in
+  commit: 83f1ccba87b06575966b65352db565c363af7bcf
+  https://android-review.googlesource.com/#/c/104520
+
+Change-Id: Id5037cbebac9b86c863da79c3b8729e627e65f8e
+Signed-off-by: JP Abgrall <jpa@google.com>
+---
+ arch/arm/include/asm/unistd.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/unistd.h b/arch/arm/include/asm/unistd.h
+index 141baa3..acabef1 100644
+--- a/arch/arm/include/asm/unistd.h
++++ b/arch/arm/include/asm/unistd.h
+@@ -15,7 +15,7 @@
+ 
+ #include <uapi/asm/unistd.h>
+ 
+-#define __NR_syscalls  (380)
++#define __NR_syscalls  (384)
+ #define __ARM_NR_cmpxchg		(__ARM_NR_BASE+0x00fff0)
+ 
+ #define __ARCH_WANT_STAT64
+-- 
+1.7.9.5
+

@@ -1,0 +1,38 @@
+From b918c72ce27090051ac9681bfd162abcec0abceb Mon Sep 17 00:00:00 2001
+From: Lorenzo Colitti <lorenzo@google.com>
+Date: Thu, 4 Jul 2013 00:52:49 +0900
+Subject: [PATCH 516/722] net: ipv6: add missing lock in ping_v6_sendmsg
+
+[net-next commit a1bdc45580fc19e968b32ad27cd7e476a4aa58f6]
+
+Bug: 12800827
+Change-Id: I93d897e5043dc89bc99f111c89ef4f8b1fa1885d
+Signed-off-by: Lorenzo Colitti <lorenzo@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ net/ipv6/ping.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/net/ipv6/ping.c b/net/ipv6/ping.c
+index 1f48868..858788d 100644
+--- a/net/ipv6/ping.c
++++ b/net/ipv6/ping.c
+@@ -197,6 +197,7 @@ int ping_v6_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+ 	if (hlimit < 0)
+ 		hlimit = ip6_dst_hoplimit(dst);
+ 
++	lock_sock(sk);
+ 	err = ip6_append_data(sk, ping_getfrag, &pfh, len,
+ 			      0, hlimit,
+ 			      np->tclass, NULL, &fl6, rt,
+@@ -211,6 +212,7 @@ int ping_v6_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+ 						 (struct icmp6hdr *) &pfh.icmph,
+ 						 len);
+ 	}
++	release_sock(sk);
+ 
+ 	if (err)
+ 		return err;
+-- 
+1.7.9.5
+

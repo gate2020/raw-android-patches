@@ -1,0 +1,93 @@
+From fc04e484c319b8df647886d4cf17f7c450453d1d Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Mon, 25 Nov 2013 13:32:51 -0800
+Subject: [PATCH 466/722] ion: optimize ion_heap_buffer_zero
+
+ion_heap_buffer_zero can spend a long time in unmap_kernel_range
+if it has to broadcast a tlb flush to every cpu for every page.
+Modify it to batch pages into a larger region to clear using a
+single mapping.  This may cause the mapping size to change if
+the buffer size is not a multiple of the mapping size, so
+switch to allocating the address space for each chunk.  This
+allows us to use vm_map_ram to handle the allocation and mapping
+together.
+
+The number of pages to zero using a single mapping is set to 32
+to hit the fastpath in vm_map_ram.
+
+Change-Id: I1accfe67b285cbc9e95e387bea4246864197827d
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_heap.c |   36 +++++++++++++++++++-------------
+ 1 file changed, 22 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion_heap.c b/drivers/staging/android/ion/ion_heap.c
+index e061b26..0d30f9f 100644
+--- a/drivers/staging/android/ion/ion_heap.c
++++ b/drivers/staging/android/ion/ion_heap.c
+@@ -100,40 +100,48 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
+ 	return 0;
+ }
+ 
++static int ion_heap_clear_pages(struct page **pages, int num, pgprot_t pgprot)
++{
++	void *addr = vm_map_ram(pages, num, -1, pgprot);
++	if (!addr)
++		return -ENOMEM;
++	memset(addr, 0, PAGE_SIZE * num);
++	vm_unmap_ram(addr, num);
++
++	return 0;
++}
++
+ int ion_heap_buffer_zero(struct ion_buffer *buffer)
+ {
+ 	struct sg_table *table = buffer->sg_table;
+ 	pgprot_t pgprot;
+ 	struct scatterlist *sg;
+-	struct vm_struct *vm_struct;
+ 	int i, j, ret = 0;
++	struct page *pages[32];
++	int k = 0;
+ 
+ 	if (buffer->flags & ION_FLAG_CACHED)
+ 		pgprot = PAGE_KERNEL;
+ 	else
+ 		pgprot = pgprot_writecombine(PAGE_KERNEL);
+ 
+-	vm_struct = get_vm_area(PAGE_SIZE, VM_ALLOC);
+-	if (!vm_struct)
+-		return -ENOMEM;
+-
+ 	for_each_sg(table->sgl, sg, table->nents, i) {
+ 		struct page *page = sg_page(sg);
+ 		unsigned long len = sg->length;
+ 
+ 		for (j = 0; j < len / PAGE_SIZE; j++) {
+-			struct page *sub_page = page + j;
+-			struct page **pages = &sub_page;
+-			ret = map_vm_area(vm_struct, pgprot, &pages);
+-			if (ret)
+-				goto end;
+-			memset(vm_struct->addr, 0, PAGE_SIZE);
+-			unmap_kernel_range((unsigned long)vm_struct->addr,
+-					   PAGE_SIZE);
++			pages[k++] = page + j;
++			if (k == ARRAY_SIZE(pages)) {
++				ret = ion_heap_clear_pages(pages, k, pgprot);
++				if (ret)
++					goto end;
++				k = 0;
++			}
+ 		}
++		if (k)
++			ret = ion_heap_clear_pages(pages, k, pgprot);
+ 	}
+ end:
+-	free_vm_area(vm_struct);
+ 	return ret;
+ }
+ 
+-- 
+1.7.9.5
+

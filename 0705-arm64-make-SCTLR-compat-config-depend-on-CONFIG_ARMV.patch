@@ -1,0 +1,59 @@
+From bad15588d39c24ecb76593f632a0ab5d71ace7ed Mon Sep 17 00:00:00 2001
+From: Rich Wiley <rwiley@nvidia.com>
+Date: Wed, 4 Jun 2014 11:41:53 -0700
+Subject: [PATCH 705/722] arm64: make SCTLR compat config depend on
+ CONFIG_ARMV7_COMPAT
+
+Conflicts:
+	arch/arm64/mm/proc.S
+
+Change-Id: I76e0067839c96e3082b42c80d3fc670cf3d371b5
+Signed-off-by: Rich Wiley <rwiley@nvidia.com>
+Reviewed-on: http://git-master/r/422173
+GVS: Gerrit_Virtual_Submit
+Reviewed-by: Alexander Van Brunt <avanbrunt@nvidia.com>
+Reviewed-by: Bharat Nihalani <bnihalani@nvidia.com>
+Tested-by: Bharat Nihalani <bnihalani@nvidia.com>
+---
+ arch/arm64/Kconfig   |   11 -----------
+ arch/arm64/mm/proc.S |    2 +-
+ 2 files changed, 1 insertion(+), 12 deletions(-)
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 0df94f1..787cee3 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -218,17 +218,6 @@ config ARMV7_COMPAT
+ 	 If you want to execute ARMv7 applications, say Y
+ 
+ 
+-config ARMV7_COMPAT_CP15_BARRIER
+-	bool "Allow applications to use the CP15 barrier operations"
+-	depends on ARMV7_COMPAT
+-	default y
+-	help
+-	 This option allows applications to use deprecated CP15 barrier
+-	 instructions. This is useful because this was the only way to create
+-	 a barrier on older ARM processors.
+-
+-	 If you want to execute ARMv7 applications, say Y
+-
+ source "mm/Kconfig"
+ 
+ endmenu
+diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+index 48fffb2..9796b33 100644
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -160,7 +160,7 @@ ENTRY(__cpu_setup)
+ 	ret					// return to head.S
+ ENDPROC(__cpu_setup)
+ 
+-#ifdef CONFIG_ARMV7_COMPAT_CP15_BARRIER
++#ifdef CONFIG_ARMV7_COMPAT
+ 	/*
+ 	 *                 n n            T
+ 	 *       U E      WT T UD     US IHBS
+-- 
+1.7.9.5
+

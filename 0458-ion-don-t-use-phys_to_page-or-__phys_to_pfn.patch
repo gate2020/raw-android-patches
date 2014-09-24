@@ -1,0 +1,71 @@
+From f26a6f2aa0beea7eeb0a2f69d44a5975ef8c887e Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Thu, 19 Sep 2013 10:13:53 -0500
+Subject: [PATCH 458/722] ion: don't use phys_to_page or __phys_to_pfn
+
+phys_to_page and __phys_to_pfn don't exist on all platforms.
+Use a combination of pfn_to_page, PFN_DOWN, page_to_pfn, and
+virt_to_page to get the same results.
+
+Change-Id: I53cef26059800bc8b7fb85ae458741574c97c257
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/ion_carveout_heap.c |    4 ++--
+ drivers/staging/android/ion/ion_chunk_heap.c    |    5 +++--
+ drivers/staging/android/ion/ion_system_heap.c   |    2 +-
+ 3 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion_carveout_heap.c b/drivers/staging/android/ion/ion_carveout_heap.c
+index f53e700..ed2b7ae 100644
+--- a/drivers/staging/android/ion/ion_carveout_heap.c
++++ b/drivers/staging/android/ion/ion_carveout_heap.c
+@@ -96,8 +96,8 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
+ 		kfree(table);
+ 		return ERR_PTR(ret);
+ 	}
+-	sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
+-		    0);
++	sg_set_page(table->sgl, pfn_to_page(PFN_DOWN(buffer->priv_phys)),
++			buffer->size, 0);
+ 	return table;
+ }
+ 
+diff --git a/drivers/staging/android/ion/ion_chunk_heap.c b/drivers/staging/android/ion/ion_chunk_heap.c
+index 3ca4b90..e17b601 100644
+--- a/drivers/staging/android/ion/ion_chunk_heap.c
++++ b/drivers/staging/android/ion/ion_chunk_heap.c
+@@ -71,7 +71,8 @@ static int ion_chunk_heap_allocate(struct ion_heap *heap,
+ 						     chunk_heap->chunk_size);
+ 		if (!paddr)
+ 			goto err;
+-		sg_set_page(sg, phys_to_page(paddr), chunk_heap->chunk_size, 0);
++		sg_set_page(sg, pfn_to_page(PFN_DOWN(paddr)),
++				chunk_heap->chunk_size, 0);
+ 		sg = sg_next(sg);
+ 	}
+ 
+@@ -167,7 +168,7 @@ struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *heap_data)
+ 		goto error;
+ 	}
+ 	for (i = 0; i < chunk_heap->size; i += PAGE_SIZE) {
+-		struct page *page = phys_to_page(chunk_heap->base + i);
++		struct page *page = pfn_to_page(PFN_DOWN(chunk_heap->base + i));
+ 		struct page **pages = &page;
+ 
+ 		ret = map_vm_area(vm_struct, pgprot, &pages);
+diff --git a/drivers/staging/android/ion/ion_system_heap.c b/drivers/staging/android/ion/ion_system_heap.c
+index 4eb0ae8..954eb56 100644
+--- a/drivers/staging/android/ion/ion_system_heap.c
++++ b/drivers/staging/android/ion/ion_system_heap.c
+@@ -426,7 +426,7 @@ int ion_system_contig_heap_map_user(struct ion_heap *heap,
+ 				    struct ion_buffer *buffer,
+ 				    struct vm_area_struct *vma)
+ {
+-	unsigned long pfn = __phys_to_pfn(virt_to_phys(buffer->priv_virt));
++	unsigned long pfn = page_to_pfn(virt_to_page(buffer->priv_virt));
+ 	return remap_pfn_range(vma, vma->vm_start, pfn + vma->vm_pgoff,
+ 			       vma->vm_end - vma->vm_start,
+ 			       vma->vm_page_prot);
+-- 
+1.7.9.5
+

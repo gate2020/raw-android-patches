@@ -1,0 +1,54 @@
+From 02273a4cd3ebada77f088ae13229813ca918af44 Mon Sep 17 00:00:00 2001
+From: Jean Pihet <jean.pihet@linaro.org>
+Date: Mon, 3 Feb 2014 19:18:29 +0100
+Subject: [PATCH 677/722] ARM64: perf: support dwarf unwinding in compat mode
+
+Add support for unwinding using the dwarf information in compat
+mode. Using the correct user stack pointer allows perf to record
+the frames correctly in the native and compat modes.
+
+Note that although the dwarf frame unwinding works ok using
+libunwind in native mode (on ARMv7 & ARMv8), some changes are
+required to the libunwind code for the compat mode. Those changes
+are posted separately on the libunwind mailing list.
+
+Tested on ARMv8 platform with v8 and compat v7 binaries, the latter
+are statically built.
+
+Signed-off-by: Jean Pihet <jean.pihet@linaro.org>
+Acked-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+---
+ arch/arm64/include/asm/compat.h |    2 +-
+ arch/arm64/include/asm/ptrace.h |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/include/asm/compat.h b/arch/arm64/include/asm/compat.h
+index 899af80..7058eec 100644
+--- a/arch/arm64/include/asm/compat.h
++++ b/arch/arm64/include/asm/compat.h
+@@ -214,7 +214,7 @@ static inline compat_uptr_t ptr_to_compat(void __user *uptr)
+ 	return (u32)(unsigned long)uptr;
+ }
+ 
+-#define compat_user_stack_pointer() (current_pt_regs()->compat_sp)
++#define compat_user_stack_pointer() (user_stack_pointer(current_pt_regs()))
+ 
+ static inline void __user *arch_compat_alloc_user_space(long len)
+ {
+diff --git a/arch/arm64/include/asm/ptrace.h b/arch/arm64/include/asm/ptrace.h
+index 41a71ee..c2a1997 100644
+--- a/arch/arm64/include/asm/ptrace.h
++++ b/arch/arm64/include/asm/ptrace.h
+@@ -131,7 +131,7 @@ struct pt_regs {
+ 	(!((regs)->pstate & PSR_F_BIT))
+ 
+ #define user_stack_pointer(regs) \
+-	((regs)->sp)
++	(!compat_user_mode(regs)) ? ((regs)->sp) : ((regs)->compat_sp)
+ 
+ /*
+  * Are the current registers suitable for user mode? (used to maintain
+-- 
+1.7.9.5
+

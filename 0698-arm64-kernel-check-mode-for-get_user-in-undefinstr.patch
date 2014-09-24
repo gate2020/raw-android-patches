@@ -1,0 +1,58 @@
+From b3987a9c4664d18b8c8af6d43e6ae1904c8febce Mon Sep 17 00:00:00 2001
+From: Peng Du <pdu@nvidia.com>
+Date: Wed, 23 Jul 2014 11:40:33 -0700
+Subject: [PATCH 698/722] arm64: kernel: check mode for get_user in undefinstr
+
+get_user() should be called only for user_mode undef instruction.
+
+Change-Id: Ia654783de0cf72abac6847ac9630236f9f0d6ebb
+Signed-off-by: Peng Du <pdu@nvidia.com>
+Reviewed-on: http://git-master/r/441348
+Reviewed-by: Thomas Cherry <tcherry@nvidia.com>
+Reviewed-by: Bo Yan <byan@nvidia.com>
+---
+ arch/arm64/kernel/traps.c |   26 +++++++++++++++-----------
+ 1 file changed, 15 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+index 4f8bf32..0da4769 100644
+--- a/arch/arm64/kernel/traps.c
++++ b/arch/arm64/kernel/traps.c
+@@ -287,19 +287,23 @@ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
+ 	/* check for AArch32 breakpoint instructions */
+ 	if (!aarch32_break_handler(regs))
+ 		return;
+-	if (compat_thumb_mode(regs)) {
+-		if (get_user(instr, (u16 __user *)pc))
+-			goto die_sig;
+-		if (is_wide_instruction(instr)) {
+-			u32 instr2;
+-			if (get_user(instr2, (u16 __user *)pc+1))
++	if (user_mode(regs)) {
++		if (compat_thumb_mode(regs)) {
++			if (get_user(instr, (u16 __user *)pc))
+ 				goto die_sig;
+-			instr <<= 16;
+-			instr |= instr2;
++			if (is_wide_instruction(instr)) {
++				u32 instr2;
++				if (get_user(instr2, (u16 __user *)pc+1))
++					goto die_sig;
++				instr <<= 16;
++				instr |= instr2;
++			}
++		} else if (get_user(instr, (u32 __user *)pc)) {
++			goto die_sig;
+ 		}
+-
+-	} else if ((get_user(instr, (u32 __user *)pc))) {
+-		goto die_sig;
++	} else {
++		/* kernel mode */
++		instr = *((u32 *)pc);
+ 	}
+ 
+ 	if (call_undef_hook(regs, instr) == 0)
+-- 
+1.7.9.5
+

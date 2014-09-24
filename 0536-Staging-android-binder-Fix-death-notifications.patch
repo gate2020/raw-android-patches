@@ -1,0 +1,44 @@
+From fd3a17735623a882bc6afd590e9c9bfb0e770f80 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Arve=20Hj=C3=B8nnev=C3=A5g?= <arve@android.com>
+Date: Fri, 7 Feb 2014 17:46:21 -0800
+Subject: [PATCH 536/722] Staging: android: binder: Fix death notifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The change (008fa749e0fe5b2fffd20b7fe4891bb80d072c6a) that moved the
+node release code to a separate function broke death notifications in
+some cases. When it encountered a reference without a death
+notification request, it would skip looking at the remaining
+references, and therefore fail to send death notifications for them.
+
+Change-Id: I12083a50709ccc30ba11a5f4d9eeb5f0ff4471c6
+Signed-off-by: Arve Hjønnevåg <arve@android.com>
+---
+ drivers/staging/android/binder.c |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/staging/android/binder.c b/drivers/staging/android/binder.c
+index a1931c0..6aec850 100644
+--- a/drivers/staging/android/binder.c
++++ b/drivers/staging/android/binder.c
+@@ -2941,7 +2941,7 @@ static int binder_node_release(struct binder_node *node, int refs)
+ 		refs++;
+ 
+ 		if (!ref->death)
+-			goto out;
++			continue;
+ 
+ 		death++;
+ 
+@@ -2954,7 +2954,6 @@ static int binder_node_release(struct binder_node *node, int refs)
+ 			BUG();
+ 	}
+ 
+-out:
+ 	binder_debug(BINDER_DEBUG_DEAD_BINDER,
+ 		     "node %d now dead, refs %d, death %d\n",
+ 		     node->debug_id, refs, death);
+-- 
+1.7.9.5
+

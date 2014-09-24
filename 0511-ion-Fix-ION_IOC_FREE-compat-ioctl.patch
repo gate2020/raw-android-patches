@@ -1,0 +1,76 @@
+From 233fd81496ca2cb483f3987b5753b71d7071531a Mon Sep 17 00:00:00 2001
+From: Laura Abbott <lauraa@codeaurora.org>
+Date: Tue, 28 Jan 2014 15:39:48 -0800
+Subject: [PATCH 511/722] ion: Fix ION_IOC_FREE compat ioctl
+
+The compat ioctl for ION_IOC_FREE currently passes allocation data
+instead of the free data. Correct this.
+
+Change-Id: I5108a1937104b8368426f7695b4a2df416036a87
+Signed-off-by: Laura Abbott <lauraa@codeaurora.org>
+---
+ drivers/staging/android/ion/compat_ion.c |   25 +++++++++++++++++++++----
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/staging/android/ion/compat_ion.c b/drivers/staging/android/ion/compat_ion.c
+index e9a8132..fb0ebdd 100644
+--- a/drivers/staging/android/ion/compat_ion.c
++++ b/drivers/staging/android/ion/compat_ion.c
+@@ -35,9 +35,14 @@ struct compat_ion_custom_data {
+ 	compat_ulong_t arg;
+ };
+ 
++struct compat_ion_handle_data {
++	compat_int_t handle;
++};
++
+ #define COMPAT_ION_IOC_ALLOC	_IOWR(ION_IOC_MAGIC, 0, \
+ 				      struct compat_ion_allocation_data)
+-#define COMPAT_ION_IOC_FREE	_IOWR(ION_IOC_MAGIC, 1, struct ion_handle_data)
++#define COMPAT_ION_IOC_FREE	_IOWR(ION_IOC_MAGIC, 1, \
++				      struct compat_ion_handle_data)
+ #define COMPAT_ION_IOC_CUSTOM	_IOWR(ION_IOC_MAGIC, 6, \
+ 				      struct compat_ion_custom_data)
+ 
+@@ -64,6 +69,18 @@ static int compat_get_ion_allocation_data(
+ 	return err;
+ }
+ 
++static int compat_get_ion_handle_data(
++			struct compat_ion_handle_data __user *data32,
++			struct ion_handle_data __user *data)
++{
++	compat_int_t i;
++
++	err = get_user(i, &data32->handle);
++	err |= put_user(i, &data->handle);
++
++	return err;
++}
++
+ static int compat_put_ion_allocation_data(
+ 			struct compat_ion_allocation_data __user *data32,
+ 			struct ion_allocation_data __user *data)
+@@ -132,8 +149,8 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 	}
+ 	case COMPAT_ION_IOC_FREE:
+ 	{
+-		struct compat_ion_allocation_data __user *data32;
+-		struct ion_allocation_data __user *data;
++		struct compat_ion_handle_data __user *data32;
++		struct ion_handle_data __user *data;
+ 		int err;
+ 
+ 		data32 = compat_ptr(arg);
+@@ -141,7 +158,7 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		if (data == NULL)
+ 			return -EFAULT;
+ 
+-		err = compat_get_ion_allocation_data(data32, data);
++		err = compat_get_ion_handle_data(data32, data);
+ 		if (err)
+ 			return err;
+ 
+-- 
+1.7.9.5
+

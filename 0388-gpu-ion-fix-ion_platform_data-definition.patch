@@ -1,0 +1,28 @@
+From 0a87e75ab5ab0d8a14a3f293d4970f9b3e50bf6e Mon Sep 17 00:00:00 2001
+From: Benjamin Gaignard <benjamin.gaignard@linaro.org>
+Date: Fri, 22 Mar 2013 18:08:29 +0100
+Subject: [PATCH 388/722] gpu: ion: fix ion_platform_data definition
+
+fix ion_platform_heap to make is use an usual way in board configuration file.
+
+Signed-off-by: Benjamin Gaignard <benjamin.gaignard@linaro.org>
+---
+ include/linux/ion.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/linux/ion.h b/include/linux/ion.h
+index 8414a6d..2ce49d0 100644
+--- a/include/linux/ion.h
++++ b/include/linux/ion.h
+@@ -105,7 +105,7 @@ struct ion_platform_heap {
+  */
+ struct ion_platform_data {
+ 	int nr;
+-	struct ion_platform_heap heaps[];
++	struct ion_platform_heap *heaps;
+ };
+ 
+ /**
+-- 
+1.7.9.5
+

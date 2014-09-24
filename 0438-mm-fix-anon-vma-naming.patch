@@ -1,0 +1,55 @@
+From 527aae529118f2cbe99c945ffe74be1c04ceaba6 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Wed, 30 Oct 2013 13:14:12 -0700
+Subject: [PATCH 438/722] mm: fix anon vma naming
+
+Fix two bugs caused by merging anon vma_naming, a typo in
+mempolicy.c and a bad merge in sys.c.
+
+Change-Id: Ia4ced447d50573e68195e95ea2f2b4d9456b8a90
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ kernel/sys.c   |    6 +++---
+ mm/mempolicy.c |    2 +-
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/kernel/sys.c b/kernel/sys.c
+index 1c9090b..3dcf1de 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -2368,9 +2368,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
+ 			else
+ 				return -EINVAL;
+ 			break;
+-		case PR_SET_VMA:
+-			error = prctl_set_vma(arg2, arg3, arg4, arg5);
+-			break;
+ 		default:
+ 			return -EINVAL;
+ 		}
+@@ -2407,6 +2404,9 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
+ 		if (arg2 || arg3 || arg4 || arg5)
+ 			return -EINVAL;
+ 		return current->no_new_privs ? 1 : 0;
++	case PR_SET_VMA:
++		error = prctl_set_vma(arg2, arg3, arg4, arg5);
++		break;
+ 	default:
+ 		error = -EINVAL;
+ 		break;
+diff --git a/mm/mempolicy.c b/mm/mempolicy.c
+index 7b349aa..bf12a3f 100644
+--- a/mm/mempolicy.c
++++ b/mm/mempolicy.c
+@@ -728,7 +728,7 @@ static int mbind_range(struct mm_struct *mm, unsigned long start,
+ 			((vmstart - vma->vm_start) >> PAGE_SHIFT);
+ 		prev = vma_merge(mm, prev, vmstart, vmend, vma->vm_flags,
+ 				  vma->anon_vma, vma->vm_file, pgoff,
+-				  new_pol, vma_get_anon_name(name));
++				  new_pol, vma_get_anon_name(vma));
+ 		if (prev) {
+ 			vma = prev;
+ 			next = vma->vm_next;
+-- 
+1.7.9.5
+

@@ -1,0 +1,33 @@
+From 6b04956b0ec9ebc3ec730905780fe64195167a00 Mon Sep 17 00:00:00 2001
+From: Masanari Iida <standby24x7@gmail.com>
+Date: Sun, 23 Jun 2013 23:47:15 +0900
+Subject: [PATCH 551/722] staging: android: Fix typo in staging/android
+
+Fix "with with" in debug message.
+
+Issue: ABIT-21
+Change-Id: Icd0b195524f4c77272276991a1e8a00aecef65c9
+Signed-off-by: Masanari Iida <standby24x7@gmail.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Qiming Shi <qiming.shi@intel.com>
+Signed-off-by: Jun Tian <jun.j.tian@intel.com>
+---
+ drivers/staging/android/binder.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/binder.c b/drivers/staging/android/binder.c
+index 55195ea..d4e5290 100644
+--- a/drivers/staging/android/binder.c
++++ b/drivers/staging/android/binder.c
+@@ -792,7 +792,7 @@ static void binder_delete_free_buffer(struct binder_proc *proc,
+ 	list_del(&buffer->entry);
+ 	if (free_page_start || free_page_end) {
+ 		binder_debug(BINDER_DEBUG_BUFFER_ALLOC,
+-			     "%d: merge free, buffer %p do not share page%s%s with with %p or %p\n",
++			     "%d: merge free, buffer %p do not share page%s%s with %p or %p\n",
+ 			     proc->pid, buffer, free_page_start ? "" : " end",
+ 			     free_page_end ? "" : " start", prev, next);
+ 		binder_update_page_range(proc, 0, free_page_start ?
+-- 
+1.7.9.5
+

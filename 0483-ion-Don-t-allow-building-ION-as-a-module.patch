@@ -1,0 +1,35 @@
+From f2b94c52648fa1bb7cba053ab0f4a85e066485a1 Mon Sep 17 00:00:00 2001
+From: John Stultz <john.stultz@linaro.org>
+Date: Sat, 14 Dec 2013 12:06:45 -0800
+Subject: [PATCH 483/722] ion: Don't allow building ION as a module.
+
+ION doesn't export the proper symbols for it to be a module. This
+causes build issues when ION is configured as a module.
+
+Since Andorid kernels rarely use modules (I think recent policy
+requires no modules?), go ahead and set the ION config to a bool
+from the tristate option.
+
+If folks decide ION as a module is important, we will have to go
+through and export the various needed symbols.
+
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/ion/Kconfig |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/Kconfig b/drivers/staging/android/ion/Kconfig
+index a342d96..b95281e 100644
+--- a/drivers/staging/android/ion/Kconfig
++++ b/drivers/staging/android/ion/Kconfig
+@@ -1,5 +1,5 @@
+ menuconfig ION
+-	tristate "Ion Memory Manager"
++	bool "Ion Memory Manager"
+ 	select GENERIC_ALLOCATOR
+ 	select DMA_SHARED_BUFFER
+ 	---help---
+-- 
+1.7.9.5
+

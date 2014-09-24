@@ -1,0 +1,28 @@
+From 8af13473b7ca01524862df8e8dae97892ea548ad Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Fri, 22 Nov 2013 22:48:42 -0800
+Subject: [PATCH 464/722] ion: drop dependency on ARM
+
+Ion will compile and run on other platforms now, remove the
+dependency on ARM.
+
+Change-Id: I9da0ab686708bdab575a021031392b4402cce090
+Signed-off-by: Colin Cross <ccross@android.com>
+---
+ drivers/staging/android/ion/Kconfig |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/Kconfig b/drivers/staging/android/ion/Kconfig
+index 6a5d8cf..3215bd8 100644
+--- a/drivers/staging/android/ion/Kconfig
++++ b/drivers/staging/android/ion/Kconfig
+@@ -1,6 +1,5 @@
+ menuconfig ION
+ 	tristate "Ion Memory Manager"
+-	depends on ARM
+ 	select GENERIC_ALLOCATOR
+ 	select DMA_SHARED_BUFFER
+ 	help
+-- 
+1.7.9.5
+

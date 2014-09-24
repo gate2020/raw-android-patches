@@ -1,0 +1,91 @@
+From 7b03678ec56f64297df40c873fdfaf87d5a3a1f8 Mon Sep 17 00:00:00 2001
+From: Serban Constantinescu <serban.constantinescu@arm.com>
+Date: Thu, 4 Jul 2013 10:54:43 +0100
+Subject: [PATCH 519/722] staging: android: binder: modify struct
+ binder_write_read to use size_t
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This change mirrors the userspace operation where struct binder_write_read
+members that specify the buffer size and consumed size are size_t elements.
+
+The patch also fixes the binder_thread_write() and binder_thread_read()
+functions prototypes to conform with the definition of binder_write_read.
+
+The changes do not affect existing 32bit ABI.
+
+Change-Id: I987246d507b9c5e4627c62a1da971d11869ac5a0
+Signed-off-by: Serban Constantinescu <serban.constantinescu@arm.com>
+Acked-by: Arve Hjønnevåg <arve@android.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/staging/android/binder.c      |   10 +++++-----
+ drivers/staging/android/uapi/binder.h |    8 ++++----
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/staging/android/binder.c b/drivers/staging/android/binder.c
+index f8d5b03..59e714c 100644
+--- a/drivers/staging/android/binder.c
++++ b/drivers/staging/android/binder.c
+@@ -1719,7 +1719,7 @@ err_no_context_mgr_node:
+ }
+ 
+ int binder_thread_write(struct binder_proc *proc, struct binder_thread *thread,
+-			void __user *buffer, int size, signed long *consumed)
++			void __user *buffer, size_t size, size_t *consumed)
+ {
+ 	uint32_t cmd;
+ 	void __user *ptr = buffer + *consumed;
+@@ -2099,8 +2099,8 @@ static int binder_has_thread_work(struct binder_thread *thread)
+ 
+ static int binder_thread_read(struct binder_proc *proc,
+ 			      struct binder_thread *thread,
+-			      void  __user *buffer, int size,
+-			      signed long *consumed, int non_block)
++			      void  __user *buffer, size_t size,
++			      size_t *consumed, int non_block)
+ {
+ 	void __user *ptr = buffer + *consumed;
+ 	void __user *end = buffer + size;
+@@ -2597,7 +2597,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 			goto err;
+ 		}
+ 		binder_debug(BINDER_DEBUG_READ_WRITE,
+-			     "%d:%d write %ld at %08lx, read %ld at %08lx\n",
++			     "%d:%d write %zd at %08lx, read %zd at %08lx\n",
+ 			     proc->pid, thread->pid, bwr.write_size,
+ 			     bwr.write_buffer, bwr.read_size, bwr.read_buffer);
+ 
+@@ -2623,7 +2623,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 			}
+ 		}
+ 		binder_debug(BINDER_DEBUG_READ_WRITE,
+-			     "%d:%d wrote %ld of %ld, read return %ld of %ld\n",
++			     "%d:%d wrote %zd of %zd, read return %zd of %zd\n",
+ 			     proc->pid, thread->pid, bwr.write_consumed, bwr.write_size,
+ 			     bwr.read_consumed, bwr.read_size);
+ 		if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
+diff --git a/drivers/staging/android/uapi/binder.h b/drivers/staging/android/uapi/binder.h
+index b6cb483..9e19f64 100644
+--- a/drivers/staging/android/uapi/binder.h
++++ b/drivers/staging/android/uapi/binder.h
+@@ -67,11 +67,11 @@ struct flat_binder_object {
+  */
+ 
+ struct binder_write_read {
+-	signed long	write_size;	/* bytes to write */
+-	signed long	write_consumed;	/* bytes consumed by driver */
++	size_t	write_size;	/* bytes to write */
++	size_t	write_consumed;	/* bytes consumed by driver */
+ 	unsigned long	write_buffer;
+-	signed long	read_size;	/* bytes to read */
+-	signed long	read_consumed;	/* bytes consumed by driver */
++	size_t	read_size;	/* bytes to read */
++	size_t	read_consumed;	/* bytes consumed by driver */
+ 	unsigned long	read_buffer;
+ };
+ 
+-- 
+1.7.9.5
+

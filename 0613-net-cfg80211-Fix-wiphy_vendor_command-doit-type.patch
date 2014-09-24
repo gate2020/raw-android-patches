@@ -1,0 +1,27 @@
+From dd979cc254c3aeec85927dbaad669d1ecd193c6f Mon Sep 17 00:00:00 2001
+From: Dmitry Shmidt <dimitrysh@google.com>
+Date: Tue, 1 Jul 2014 14:48:15 -0700
+Subject: [PATCH 613/722] net: cfg80211: Fix wiphy_vendor_command 'doit' type
+
+Change-Id: I5b1732eed7ac4f6bc267b4baa2153f6de2e16dc8
+Signed-off-by: Dmitry Shmidt <dimitrysh@google.com>
+---
+ include/net/cfg80211.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
+index 2ebb168..d9681a2 100644
+--- a/include/net/cfg80211.h
++++ b/include/net/cfg80211.h
+@@ -2497,7 +2497,7 @@ struct wiphy_vendor_command {
+ 	struct nl80211_vendor_cmd_info info;
+ 	u32 flags;
+ 	int (*doit)(struct wiphy *wiphy, struct wireless_dev *wdev,
+-		    void *data, int data_len);
++		    const void *data, int data_len);
+ };
+ 
+ /**
+-- 
+1.7.9.5
+

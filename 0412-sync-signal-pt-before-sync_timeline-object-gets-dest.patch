@@ -1,0 +1,69 @@
+From 763b334bd467a1f9453fe19ab19354e3b8c351e2 Mon Sep 17 00:00:00 2001
+From: Prakash Kamliya <pkamliya@codeaurora.org>
+Date: Fri, 4 Oct 2013 17:50:50 +0530
+Subject: [PATCH 412/722] sync: signal pt before sync_timeline object gets
+ destroyed
+
+There is a race condition
+
+Assume we have *one* sync_fence object, with *one* sync_pt
+which belongs to *one* sync_timeline, given this condition,
+sync_timeline->kref will have two counts, one for sync_timeline
+(implicit) and another for sync_pt.
+
+Assume following is the situation on CPU
+
+Theead-1 : (Thread which calls sync_timeline_destroy())
+  -> (some function calls)
+   -> sync_timeline_destory()
+    -> sync_timeline_signal() (CPU is inside this
+function after putting reference to sync_timeline)
+
+At this time Thread-2 comes and does following
+
+Thread-2 : (fclose on fence fd)
+> sync_fence_release() -> because of fclose() on fence object
+ -> sync_fence_free()
+  -> sync_pt_free()
+   -> kref_put(&pt->parent->kref, sync_timeline_free);
+    -> sync_timeline_free() (CPU is inside this because
+this time kref will be zero after _put)
+
+Thread-2 will free sync_timeline object before Thread-1
+has finished its work inside sync_timeline_signal.
+
+With this change we signals all sync_pt before putting
+reference to sync_timeline object.
+
+Change-Id: Ic680e4d0bbef1c46bcb7cfba693395645241d203
+Signed-off-by: Prakash Kamliya <pkamliya@codeaurora.org>
+---
+ drivers/staging/android/sync.c |    8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/staging/android/sync.c b/drivers/staging/android/sync.c
+index 3893a35..c5a4393 100644
+--- a/drivers/staging/android/sync.c
++++ b/drivers/staging/android/sync.c
+@@ -92,14 +92,14 @@ static void sync_timeline_free(struct kref *kref)
+ void sync_timeline_destroy(struct sync_timeline *obj)
+ {
+ 	obj->destroyed = true;
++	smp_wmb();
+ 
+ 	/*
+-	 * If this is not the last reference, signal any children
+-	 * that their parent is going away.
++	 * signal any children that their parent is going away.
+ 	 */
++	sync_timeline_signal(obj);
+ 
+-	if (!kref_put(&obj->kref, sync_timeline_free))
+-		sync_timeline_signal(obj);
++	kref_put(&obj->kref, sync_timeline_free);
+ }
+ EXPORT_SYMBOL(sync_timeline_destroy);
+ 
+-- 
+1.7.9.5
+

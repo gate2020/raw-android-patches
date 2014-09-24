@@ -1,0 +1,42 @@
+From 455b09d66a9ccfc572497ae88375ae343ff9ae66 Mon Sep 17 00:00:00 2001
+From: Sreeram Ramachandran <sreeram@google.com>
+Date: Tue, 8 Jul 2014 11:57:14 -0700
+Subject: [PATCH 615/722] Handle 'sk' being NULL in UID-based routing.
+
+Bug: 15413527
+Change-Id: Iab1fae9da6053b284591628ef1de878761b137b1
+Signed-off-by: Sreeram Ramachandran <sreeram@google.com>
+---
+ include/net/route.h |    2 +-
+ net/ipv4/route.c    |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/net/route.h b/include/net/route.h
+index b5b44875..647bb2a 100644
+--- a/include/net/route.h
++++ b/include/net/route.h
+@@ -142,7 +142,7 @@ static inline struct rtable *ip_route_output_ports(struct net *net, struct flowi
+ 	flowi4_init_output(fl4, oif, sk ? sk->sk_mark : 0, tos,
+ 			   RT_SCOPE_UNIVERSE, proto,
+ 			   sk ? inet_sk_flowi_flags(sk) : 0,
+-			   daddr, saddr, dport, sport, sock_i_uid(sk));
++			   daddr, saddr, dport, sport, sk ? sock_i_uid(sk) : 0);
+ 	if (sk)
+ 		security_sk_classify_flow(sk, flowi4_to_flowi(fl4));
+ 	return ip_route_output_flow(net, fl4, sk);
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index ef2fe9d..42cd979 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -517,7 +517,7 @@ static void __build_flow_key(struct flowi4 *fl4, struct sock *sk,
+ 			   RT_SCOPE_UNIVERSE, prot,
+ 			   flow_flags,
+ 			   iph->daddr, iph->saddr, 0, 0,
+-			   sock_i_uid(sk));
++			   sk ? sock_i_uid(sk) : 0);
+ }
+ 
+ static void build_skb_flow_key(struct flowi4 *fl4, const struct sk_buff *skb,
+-- 
+1.7.9.5
+

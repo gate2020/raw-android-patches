@@ -1,0 +1,30 @@
+From 9dac10e5b1f2a360e8b0fbbd785fd912dbd0b753 Mon Sep 17 00:00:00 2001
+From: Viresh Kumar <viresh.kumar@linaro.org>
+Date: Thu, 16 May 2013 05:09:56 +0000
+Subject: [PATCH 532/722] cpufreq: Add EXPORT_SYMBOL_GPL for
+ have_governor_per_policy
+
+This patch adds: EXPORT_SYMBOL_GPL(have_governor_per_policy), so that
+this routine can be used by modules too.
+
+Signed-off-by: Viresh Kumar <viresh.kumar@linaro.org>
+Signed-off-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
+---
+ drivers/cpufreq/cpufreq.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 2d53f47..2f25469 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -132,6 +132,7 @@ bool have_governor_per_policy(void)
+ {
+ 	return cpufreq_driver->have_governor_per_policy;
+ }
++EXPORT_SYMBOL_GPL(have_governor_per_policy);
+ 
+ static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, bool sysfs)
+ {
+-- 
+1.7.9.5
+

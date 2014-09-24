@@ -1,0 +1,63 @@
+From cba0c6b2913c0d075a7434025f5dc29cd813707f Mon Sep 17 00:00:00 2001
+From: Alex Van Brunt <avanbrunt@nvidia.com>
+Date: Thu, 9 Jan 2014 12:51:05 -0800
+Subject: [PATCH 707/722] arm64: cpuinfo: ARMv7 compatable cpuinfo option
+
+To be backwards compatable with the output of cpuinfo on an ARMv7,
+print the features that were optional in ARMv7 but are required in
+ARMv8.
+
+Change-Id: Ic728f71be4a971adc79ef552f25cfbf95a4dac29
+Signed-off-by: Alex Van Brunt <avanbrunt@nvidia.com>
+Reviewed-on: http://git-master/r/366095
+Reviewed-by: Richard Wiley <rwiley@nvidia.com>
+Tested-by: Oskari Jaaskelainen <oskarij@nvidia.com>
+---
+ arch/arm64/Kconfig        |   10 ++++++++++
+ arch/arm64/kernel/setup.c |    7 ++++++-
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 787cee3..71c2a07 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -217,6 +217,16 @@ config ARMV7_COMPAT
+ 
+ 	 If you want to execute ARMv7 applications, say Y
+ 
++config ARMV7_COMPAT_CPUINFO
++	bool "Report backwards compatible cpu features in /proc/cpuinfo"
++	depends on ARMV7_COMPAT
++	default y
++	help
++	 This option makes /proc/cpuinfo list CPU features that an ARMv7 or
++	 earlier kernel would report, but are not optional on an ARMv8 or later
++	 processor.
++
++	 If you want to execute ARMv7 applications, say Y
+ 
+ source "mm/Kconfig"
+ 
+diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
+index 3a06f1a..efe4850 100644
+--- a/arch/arm64/kernel/setup.c
++++ b/arch/arm64/kernel/setup.c
+@@ -420,9 +420,14 @@ static int c_show(struct seq_file *m, void *v)
+ 	for (i = 0; hwcap_str[i]; i++)
+ 		if (elf_hwcap & (1 << i))
+ 			seq_printf(m, "%s ", hwcap_str[i]);
++#ifdef CONFIG_ARMV7_COMPAT_CPUINFO
++	/* Print out the non-optional ARMv8 HW capabilities */
++	seq_printf(m, "wp half thumb fastmult vfp edsp neon vfpv3d16 tlsi ");
++	seq_printf(m, "vfpv4 idiva idivt ");
++#endif
+ 
+ 	seq_printf(m, "\nCPU implementer\t: 0x%02x\n", read_cpuid_id() >> 24);
+-	seq_printf(m, "CPU architecture: AArch64\n");
++	seq_printf(m, "CPU architecture: 8\n");
+ 	seq_printf(m, "CPU variant\t: 0x%x\n", (read_cpuid_id() >> 20) & 15);
+ 	seq_printf(m, "CPU part\t: 0x%03x\n", (read_cpuid_id() >> 4) & 0xfff);
+ 	seq_printf(m, "CPU revision\t: %d\n", read_cpuid_id() & 15);
+-- 
+1.7.9.5
+

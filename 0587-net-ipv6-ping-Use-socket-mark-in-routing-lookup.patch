@@ -1,0 +1,27 @@
+From 03fdcba8c65ff76ea3306c9ba2873147650c6e45 Mon Sep 17 00:00:00 2001
+From: Lorenzo Colitti <lorenzo@google.com>
+Date: Thu, 27 Feb 2014 13:38:26 +0900
+Subject: [PATCH 587/722] net: ipv6: ping: Use socket mark in routing lookup
+
+Change-Id: I5a61e0f9f22f193c51b1aafd270fb0642a2e0fab
+Signed-off-by: Lorenzo Colitti <lorenzo@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ net/ipv6/ping.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/ipv6/ping.c b/net/ipv6/ping.c
+index 858788d..d4edfce 100644
+--- a/net/ipv6/ping.c
++++ b/net/ipv6/ping.c
+@@ -158,6 +158,7 @@ int ping_v6_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+ 	fl6.flowi6_proto = IPPROTO_ICMPV6;
+ 	fl6.saddr = np->saddr;
+ 	fl6.daddr = *daddr;
++	fl6.flowi6_mark = sk->sk_mark;
+ 	fl6.fl6_icmp_type = user_icmph.icmp6_type;
+ 	fl6.fl6_icmp_code = user_icmph.icmp6_code;
+ 	security_sk_classify_flow(sk, flowi6_to_flowi(&fl6));
+-- 
+1.7.9.5
+
